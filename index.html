@@ -1,0 +1,342 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Plus, 
+  TrendingUp, 
+  Upload, 
+  Download, 
+  Trash2, 
+  X, 
+  Mic,
+  History,
+  FileSpreadsheet,
+  AlertCircle,
+  Calendar,
+  CheckCircle2
+} from 'lucide-react';
+
+const THEME = {
+  background: "#0E0E12",
+  surface: "#17171F",
+  primary: "#6F7CFF",
+  success: "#36E2A0",
+  danger: "#FF5F6D",
+  textPrimary: "#FFFFFF",
+  textSecondary: "#9CA3AF"
+};
+
+const CSV_HEADER = "Pair;Action;Tanggal Entry;Tanggal Exit;Entry;TP;SL;Keterangan";
+
+export default function App() {
+  const [trades, setTrades] = useState([]);
+  const [screen, setScreen] = useState('home'); 
+  const [showToast, setShowToast] = useState(null);
+  const [isListening, setIsListening] = useState(false);
+  
+  // Form State
+  const initialForm = {
+    Pair: 'XAUUSD',
+    Action: 'Buy',
+    'Tanggal Entry': new Date().toISOString().split('T')[0],
+    'Tanggal Exit': new Date().toISOString().split('T')[0],
+    Entry: '',
+    TP: '',
+    SL: '',
+    Keterangan: 'TP'
+  };
+  const [form, setForm] = useState(initialForm);
+
+  // --- Helper Functions ---
+
+  const formatDateToCSV = (dateStr) => {
+    if (!dateStr) return "";
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const d = new Date(dateStr);
+    return `${String(d.getDate()).padStart(2, '0')}-${months[d.getMonth()]}-${d.getFullYear()}`;
+  };
+
+  const toast = (msg) => {
+    setShowToast(msg);
+    setTimeout(() => setShowToast(null), 3000);
+  };
+
+  // --- Voice Logic ---
+  const handleVoiceInput = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast("Browser tidak mendukung input suara");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'id-ID';
+    recognition.interimResults = false;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    
+    recognition.onresult = (event) => {
+      const speechToText = event.results[0][0].transcript.toLowerCase();
+      console.log("Transcript:", speechToText);
+      
+      const newForm = { ...form };
+      
+      // Logika Keyword
+      if (speechToText.includes("buy")) newForm.Action = "Buy";
+      if (speechToText.includes("sell")) newForm.Action = "Sell";
+      if (speechToText.includes("tp") || speechToText.includes("take profit")) newForm.Keterangan = "TP";
+      if (speechToText.includes("sl") || speechToText.includes("stop loss")) newForm.Keterangan = "SL";
+      
+      // Regex untuk angka
+      const numbers = speechToText.match(/\d+(\.\d+)?/g);
+      if (numbers) {
+        if (numbers[0]) newForm.Entry = numbers[0];
+        if (numbers[1]) newForm.SL = numbers[1];
+        if (numbers[2]) newForm.TP = numbers[2];
+      }
+
+      setForm(newForm);
+      toast("Suara diproses: " + speechToText);
+    };
+
+    recognition.start();
+  };
+
+  // --- File Logic ---
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target.result;
+        const rows = text.split(/\r?\n/).filter(row => row.trim());
+        const headers = rows[0].split(';');
+        const parsed = rows.slice(1).map(row => {
+          const values = row.split(';');
+          const obj = {};
+          headers.forEach((h, i) => obj[h.trim()] = values[i]?.trim() || "");
+          return obj;
+        });
+        setTrades(parsed);
+        toast(`${parsed.length} data diimpor`);
+      } catch (err) {
+        toast("Gagal impor CSV");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const exportToCSV = () => {
+    if (trades.length === 0) return toast("Tidak ada data");
+    const rows = trades.map(t => 
+      `${t.Pair};${t.Action};${t['Tanggal Entry']};${t['Tanggal Exit']};${t.Entry};${t.TP};${t.SL};${t.Keterangan}`
+    ).join('\n');
+    const blob = new Blob([`${CSV_HEADER}\n${rows}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `backtest_export.csv`;
+    link.click();
+  };
+
+  const saveTrade = (e) => {
+    e.preventDefault();
+    const tradeToSave = {
+      ...form,
+      'Tanggal Entry': formatDateToCSV(form['Tanggal Entry']),
+      'Tanggal Exit': formatDateToCSV(form['Tanggal Exit'])
+    };
+    setTrades([tradeToSave, ...trades]);
+    setForm(initialForm);
+    setScreen('home');
+    toast("Data berhasil disimpan");
+  };
+
+  return (
+    <div className="min-h-screen font-sans select-none" style={{ backgroundColor: THEME.background, color: THEME.textPrimary }}>
+      
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+      <header className="px-5 pt-8 pb-4 sticky top-0 bg-[#0E0E12]/90 backdrop-blur-md z-40 flex items-center justify-between">
+        <h1 className="text-lg font-black tracking-tighter italic">BACKTEST<span className="text-[#6F7CFF]">.VOICE</span></h1>
+        <div className="flex gap-2">
+          <label className="p-2.5 rounded-xl bg-white/5 border border-white/10 active:bg-white/10">
+            <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
+            <Upload size={18} />
+          </label>
+          <button onClick={exportToCSV} className="p-2.5 rounded-xl bg-white/5 border border-white/10 active:bg-white/10">
+            <Download size={18} />
+          </button>
+        </div>
+      </header>
+
+      <main className="px-5 pb-32">
+        {/* Ringkasan */}
+        <div className="flex gap-3 mb-6">
+          <div className="flex-1 bg-[#17171F] p-4 rounded-3xl border border-white/5 shadow-xl">
+            <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Total Trades</p>
+            <p className="text-2xl font-black">{trades.length}</p>
+          </div>
+          <div className="flex-1 bg-[#17171F] p-4 rounded-3xl border border-white/5 shadow-xl">
+            <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Win Rate</p>
+            <p className="text-2xl font-black text-[#36E2A0]">
+              {trades.length ? (trades.filter(t => t.Keterangan === 'TP').length / trades.length * 100).toFixed(0) + '%' : '0%'}
+            </p>
+          </div>
+        </div>
+
+        {/* Daftar Trade */}
+        <div className="space-y-3">
+          {trades.map((t, i) => (
+            <div key={i} className="bg-[#17171F] p-4 rounded-2xl border border-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-1 h-10 rounded-full ${t.Action === 'Buy' ? 'bg-[#36E2A0]' : 'bg-[#FF5F6D]'}`} />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm">{t.Pair}</span>
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${t.Action === 'Buy' ? 'bg-[#36E2A0]/10 text-[#36E2A0]' : 'bg-[#FF5F6D]/10 text-[#FF5F6D]'}`}>
+                      {t.Action.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-0.5">{t['Tanggal Entry']}</p>
+                </div>
+              </div>
+              <div className="text-right flex items-center gap-4">
+                <div>
+                  <p className={`text-xs font-black ${t.Keterangan === 'TP' ? 'text-[#36E2A0]' : 'text-[#FF5F6D]'}`}>{t.Keterangan}</p>
+                  <p className="text-[10px] font-mono text-gray-500">{t.Entry}</p>
+                </div>
+                <button onClick={() => {
+                  const nt = [...trades]; nt.splice(i, 1); setTrades(nt); toast("Data dihapus");
+                }} className="text-gray-600"><Trash2 size={14} /></button>
+              </div>
+            </div>
+          ))}
+          {trades.length === 0 && (
+            <div className="text-center py-16 opacity-10">
+              <FileSpreadsheet size={48} className="mx-auto mb-2" />
+              <p className="text-sm">Data Kosong</p>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Sheet Input */}
+      {screen === 'add' && (
+        <div className="fixed inset-0 z-50 bg-[#0E0E12] overflow-y-auto animate-in slide-in-from-bottom-full duration-300">
+          <div className="p-5">
+            <div className="flex items-center justify-between mb-8">
+              <button onClick={() => setScreen('home')} className="p-2 -ml-2 text-gray-400"><X /></button>
+              <h2 className="text-xs font-black uppercase tracking-widest">Entry Manual & Voice</h2>
+              <button 
+                onClick={handleVoiceInput}
+                className={`p-3 rounded-full transition-all ${isListening ? 'bg-red-500 animate-pulse' : 'bg-[#6F7CFF] shadow-lg shadow-[#6F7CFF]/30'}`}
+              >
+                <Mic size={20} className="text-white" />
+              </button>
+            </div>
+
+            <form onSubmit={saveTrade} className="space-y-5">
+              {/* Buy/Sell Selection */}
+              <div className="grid grid-cols-2 bg-[#17171F] p-1.5 rounded-2xl border border-white/5">
+                {['Buy', 'Sell'].map(act => (
+                  <button key={act} type="button" onClick={() => setForm({...form, Action: act})}
+                    className={`py-3 rounded-xl text-xs font-black transition-all ${form.Action === act ? (act === 'Buy' ? 'bg-[#36E2A0] text-black' : 'bg-[#FF5F6D] text-white') : 'text-gray-500'}`}>
+                    {act}
+                  </button>
+                ))}
+              </div>
+
+              {/* Pair & Status */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase ml-1">Instrument</label>
+                  <input value={form.Pair} onChange={e => setForm({...form, Pair: e.target.value})} className="w-full bg-[#17171F] border border-white/5 rounded-xl px-4 py-3.5 text-sm outline-none" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase ml-1">Keterangan Close</label>
+                  <div className="flex bg-[#17171F] p-1 rounded-xl border border-white/5">
+                    {['TP', 'SL'].map(k => (
+                      <button key={k} type="button" onClick={() => setForm({...form, Keterangan: k})}
+                        className={`flex-1 py-2 rounded-lg text-[10px] font-black transition-all ${form.Keterangan === k ? 'bg-white/10 text-white' : 'text-gray-600'}`}>
+                        {k}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Prices */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-gray-500 uppercase ml-1">Entry Price</label>
+                <input type="number" step="any" inputMode="decimal" value={form.Entry} onChange={e => setForm({...form, Entry: e.target.value})} className="w-full bg-[#17171F] border border-white/5 rounded-xl px-4 py-3.5 text-sm outline-none" placeholder="0.00000" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase ml-1">Target (TP)</label>
+                  <input type="number" step="any" inputMode="decimal" value={form.TP} onChange={e => setForm({...form, TP: e.target.value})} className="w-full bg-[#17171F] border border-white/5 rounded-xl px-4 py-3.5 text-sm outline-none text-[#36E2A0]" placeholder="0.00" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase ml-1">Stop Loss (SL)</label>
+                  <input type="number" step="any" inputMode="decimal" value={form.SL} onChange={e => setForm({...form, SL: e.target.value})} className="w-full bg-[#17171F] border border-white/5 rounded-xl px-4 py-3.5 text-sm outline-none text-[#FF5F6D]" placeholder="0.00" />
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase ml-1 flex items-center gap-1"><Calendar size={10} /> Tanggal Entry</label>
+                  <input type="date" value={form['Tanggal Entry']} onChange={e => setForm({...form, 'Tanggal Entry': e.target.value})} className="w-full bg-[#17171F] border border-white/5 rounded-xl px-4 py-3.5 text-sm outline-none text-white appearance-none" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase ml-1 flex items-center gap-1"><Calendar size={10} /> Tanggal Exit</label>
+                  <input type="date" value={form['Tanggal Exit']} onChange={e => setForm({...form, 'Tanggal Exit': e.target.value})} className="w-full bg-[#17171F] border border-white/5 rounded-xl px-4 py-3.5 text-sm outline-none text-white appearance-none" />
+                </div>
+              </div>
+
+              <div className="pt-4">
+                <button type="submit" className="w-full bg-[#6F7CFF] py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2">
+                  <Plus size={18} strokeWidth={3} /> SIMPAN KE JURNAL
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Add Button */}
+      {screen === 'home' && (
+        <button 
+          onClick={() => setScreen('add')}
+          className="fixed bottom-8 right-6 w-16 h-16 bg-[#6F7CFF] rounded-full flex items-center justify-center shadow-2xl shadow-[#6F7CFF]/40 active:scale-90 transition-transform z-30"
+        >
+          <Plus size={32} className="text-white" strokeWidth={3} />
+        </button>
+      )}
+
+      {/* Toast */}
+      {showToast && (
+        <div className="fixed bottom-28 left-5 right-5 z-[100] animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="bg-[#1F1F2E] border border-white/10 rounded-2xl p-4 shadow-2xl flex items-center gap-3">
+            <CheckCircle2 size={18} className="text-[#36E2A0]" />
+            <span className="text-xs font-bold">{showToast}</span>
+          </div>
+        </div>
+      )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slide-in-from-bottom-full { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes slide-in-from-bottom-2 { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-in { animation: var(--duration, 400ms) ease-out both; }
+        .fade-in { animation-name: fade-in; }
+        .slide-in-from-bottom-full { animation-name: slide-in-from-bottom-full; }
+        .slide-in-from-bottom-2 { animation-name: slide-in-from-bottom-2; }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+          filter: invert(1);
+          opacity: 0.5;
+        }
+      `}} />
+    </div>
+  );
+}
+
