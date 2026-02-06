@@ -9,6 +9,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0E0E12">
+    
+    <!-- Link ke Manifest file -->
+    <link rel="manifest" href="manifest.json">
 
     <!-- Tailwind CSS & Lucide Icons -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -22,18 +25,35 @@
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .animate-slide-up { animation: slideUp 0.3s ease-out; }
         input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.5; }
-        .progress-bar { height: 4px; border-radius: 2px; overflow: hidden; }
-        .progress-fill { height: 100%; transition: width 0.3s ease; }
-        .gradient-text { background: linear-gradient(90deg, #36E2A0, #6F7CFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.5; }
+        
+        /* PWA Install Banner */
+        #install-banner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #6F7CFF;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            z-index: 100;
+            font-weight: bold;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body class="font-sans antialiased">
 
-    <div id="app" class="pb-40">
+    <!-- Banner Instalasi Kustom -->
+    <div id="install-banner">
+        ✨ Klik di sini untuk Instal Aplikasi di HP
+    </div>
+
+    <div id="app" class="pb-32">
         <!-- Header -->
-        <header class="px-5 pt-8 pb-4 sticky top-0 bg-[#0E0E12]/90 backdrop-blur-md z-40 flex items-center justify-between">
-            <h1 class="text-lg font-black tracking-tighter italic">BACKTEST<span></span></h1>
+        <header class="px-5 pt-12 pb-4 sticky top-0 bg-[#0E0E12]/90 backdrop-blur-md z-40 flex items-center justify-between">
+            <h1 class="text-lg font-black tracking-tighter italic">Backtest<span></span></h1>
             <div class="flex gap-2">
                 <label class="p-2.5 rounded-xl glass active:bg-white/10 cursor-pointer">
                     <input type="file" id="csv-upload" accept=".csv" class="hidden">
@@ -45,7 +65,7 @@
             </div>
         </header>
 
-        <!-- Basic Stats -->
+        <!-- Ringkasan Statistik -->
         <div class="px-5 flex gap-3 mb-6">
             <div class="flex-1 glass p-4 rounded-3xl">
                 <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Total Trades</p>
@@ -55,121 +75,29 @@
                 <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Win Rate</p>
                 <p id="stat-winrate" class="text-2xl font-black text-[#36E2A0]">0%</p>
             </div>
-            <div class="flex-1 glass p-4 rounded-3xl">
-                <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Avg RR</p>
-                <p id="stat-avg-rr" class="text-2xl font-black">0.00</p>
-            </div>
         </div>
 
-        <!-- Advanced Statistics -->
-        <div class="px-5 mb-6">
-            <div class="glass p-5 rounded-3xl">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-xs font-black uppercase tracking-widest gradient-text">Analisis Statistik</h3>
-                    <button id="toggle-stats" class="text-xs text-gray-500">Tampilkan Detail</button>
-                </div>
-                
-                <div id="advanced-stats" class="space-y-4 hidden">
-                    <!-- Probability Distribution -->
-                    <div>
-                        <div class="flex justify-between text-[10px] text-gray-500 font-bold uppercase mb-1">
-                            <span>Probabilitas Sukses</span>
-                            <span id="prob-value">0%</span>
-                        </div>
-                        <div class="progress-bar bg-white/5">
-                            <div id="prob-bar" class="progress-fill bg-gradient-to-r from-[#36E2A0] to-[#6F7CFF]" style="width: 0%"></div>
-                        </div>
-                    </div>
-
-                    <!-- Grid Stats -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Avg Hold Days</p>
-                            <p id="stat-avg-hold" class="text-xl font-black">0</p>
-                        </div>
-                        <div>
-                            <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Consecutive Win</p>
-                            <p id="stat-max-win-streak" class="text-xl font-black text-[#36E2A0]">0</p>
-                        </div>
-                        <div>
-                            <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Consecutive Loss</p>
-                            <p id="stat-max-loss-streak" class="text-xl font-black text-[#FF5F6D]">0</p>
-                        </div>
-                        <div>
-                            <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Profit Factor</p>
-                            <p id="stat-profit-factor" class="text-xl font-black">0.00</p>
-                        </div>
-                    </div>
-
-                    <!-- Pips Analysis -->
-                    <div class="pt-2 border-t border-white/5">
-                        <h4 class="text-[10px] text-gray-500 font-bold uppercase mb-3">Analisis Pips</h4>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Avg TP Pips</p>
-                                <p id="stat-avg-tp-pips" class="text-lg font-black text-[#36E2A0]">0</p>
-                            </div>
-                            <div>
-                                <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Avg SL Pips</p>
-                                <p id="stat-avg-sl-pips" class="text-lg font-black text-[#FF5F6D]">0</p>
-                            </div>
-                            <div class="col-span-2">
-                                <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Avg Pips/Bulan</p>
-                                <p id="stat-avg-monthly-pips" class="text-2xl font-black">0</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Monthly Pips Performance -->
-                    <div class="pt-2 border-t border-white/5">
-                        <h4 class="text-[10px] text-gray-500 font-bold uppercase mb-3">Performansi Pips Bulanan</h4>
-                        <div id="monthly-stats" class="text-xs text-gray-400">
-                            <p class="text-center py-2">Belum ada data bulanan</p>
-                        </div>
-                    </div>
-
-                    <!-- Probability Analysis -->
-                    <div class="pt-2 border-t border-white/5">
-                        <h4 class="text-[10px] text-gray-500 font-bold uppercase mb-3">Analisis Probabilitas</h4>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="glass p-3 rounded-xl">
-                                <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Win Probability</p>
-                                <p id="stat-win-prob" class="text-xl font-black text-[#36E2A0]">0%</p>
-                                <p class="text-[8px] text-gray-600">Berdasar data historis</p>
-                            </div>
-                            <div class="glass p-3 rounded-xl">
-                                <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Expected RR</p>
-                                <p id="stat-expected-rr" class="text-xl font-black">0.00</p>
-                                <p class="text-[8px] text-gray-600">Win% × Avg RR</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- List -->
+        <!-- Daftar Transaksi -->
         <div id="trade-list" class="px-5 space-y-3">
-            <!-- Data trades akan muncul di sini -->
+            <!-- Data akan dirender di sini -->
         </div>
 
-        <!-- Floating Action Button -->
+        <!-- Tombol Tambah Floating -->
         <button id="fab-add" class="fixed bottom-8 right-6 w-16 h-16 bg-[#6F7CFF] rounded-full flex items-center justify-center shadow-2xl shadow-[#6F7CFF]/40 active:scale-90 transition-transform z-30">
             <i data-lucide="plus" class="w-8 h-8 text-white stroke-[3]"></i>
         </button>
 
-        <!-- Overlay Add Form -->
+        <!-- Formulir Overlay -->
         <div id="overlay" class="fixed inset-0 z-50 bg-[#0E0E12] hidden overflow-y-auto px-5 py-8">
             <div class="flex items-center justify-between mb-8">
                 <button id="btn-close" class="p-2 -ml-2 text-gray-400"><i data-lucide="x"></i></button>
-                <h2 class="text-xs font-black uppercase tracking-widest">Entry Data</h2>
-                <button id="btn-voice" class="p-3 rounded-full bg-[#6F7CFF] shadow-lg shadow-[#6F7CFF]/30">
+                <h2 class="text-xs font-black uppercase tracking-widest text-center">Input Jurnal</h2>
+                <button id="btn-voice" class="p-3 rounded-full bg-[#6F7CFF] shadow-lg shadow-[#6F7CFF]/30 active:scale-90">
                     <i data-lucide="mic" class="w-5 h-5 text-white"></i>
                 </button>
             </div>
 
             <form id="trade-form" class="space-y-5">
-                <!-- Action Toggle -->
                 <div class="grid grid-cols-2 glass p-1.5 rounded-2xl">
                     <button type="button" data-val="Buy" class="toggle-action py-3 rounded-xl text-xs font-black transition-all bg-[#36E2A0] text-black">BUY</button>
                     <button type="button" data-val="Sell" class="toggle-action py-3 rounded-xl text-xs font-black transition-all text-gray-500">SELL</button>
@@ -178,16 +106,10 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1.5">
                         <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Pair</label>
-                        <select id="f-pair" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm">
-                            <option value="XAUUSD" selected>XAUUSD</option>
-                            <option value="EURUSD">EURUSD</option>
-                            <option value="GBPUSD">GBPUSD</option>
-                            <option value="USDJPY">USDJPY</option>
-                            <option value="BTCUSD">BTCUSD</option>
-                        </select>
+                        <input id="f-pair" type="text" value="XAUUSD" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm">
                     </div>
                     <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Result</label>
+                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Status Close</label>
                         <div class="flex glass p-1 rounded-xl">
                             <button type="button" data-val="TP" class="toggle-reason flex-1 py-2 rounded-lg text-[10px] font-black transition-all bg-white/10 text-white">TP</button>
                             <button type="button" data-val="SL" class="toggle-reason flex-1 py-2 rounded-lg text-[10px] font-black transition-all text-gray-600">SL</button>
@@ -197,32 +119,32 @@
 
                 <div class="space-y-1.5">
                     <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Entry Price</label>
-                    <input id="f-entry" type="number" step="0.01" inputmode="decimal" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm" placeholder="0.00">
+                    <input id="f-entry" type="number" step="any" inputmode="decimal" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm" placeholder="0.00">
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1.5">
                         <label class="text-[10px] font-bold text-gray-500 uppercase ml-1 text-[#36E2A0]">TP Price</label>
-                        <input id="f-tp" type="number" step="0.01" inputmode="decimal" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-[#36E2A0]" placeholder="0.00">
+                        <input id="f-tp" type="number" step="any" inputmode="decimal" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-[#36E2A0]" placeholder="0.00">
                     </div>
                     <div class="space-y-1.5">
                         <label class="text-[10px] font-bold text-gray-500 uppercase ml-1 text-[#FF5F6D]">SL Price</label>
-                        <input id="f-sl" type="number" step="0.01" inputmode="decimal" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-[#FF5F6D]" placeholder="0.00">
+                        <input id="f-sl" type="number" step="any" inputmode="decimal" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-[#FF5F6D]" placeholder="0.00">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Entry Date</label>
-                        <input id="f-date-in" type="datetime-local" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-white">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Tgl Entry</label>
+                        <input id="f-date-in" type="date" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-white">
                     </div>
                     <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Exit Date</label>
-                        <input id="f-date-out" type="datetime-local" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-white">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Tgl Exit</label>
+                        <input id="f-date-out" type="date" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-white">
                     </div>
                 </div>
 
-                <div class="pt-4">
+                <div class="pt-4 pb-10">
                     <button type="submit" class="w-full bg-[#6F7CFF] py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform">
                         SIMPAN JURNAL
                     </button>
@@ -230,9 +152,9 @@
             </form>
         </div>
 
-        <!-- Toast -->
-        <div id="toast" class="fixed bottom-28 left-5 right-5 z-[100] glass rounded-2xl p-4 hidden flex items-center gap-3">
-            <i data-lucide="info" class="w-5 h-5 text-[#6F7CFF]"></i>
+        <!-- Notifikasi Toast -->
+        <div id="toast" class="fixed bottom-28 left-5 right-5 z-[100] glass rounded-2xl p-4 hidden flex items-center gap-3 animate-slide-up">
+            <i data-lucide="check-circle" class="w-5 h-5 text-[#36E2A0]"></i>
             <span id="toast-msg" class="text-xs font-bold">Pesan</span>
         </div>
     </div>
@@ -240,18 +162,10 @@
     <script>
         lucide.createIcons();
 
-        // Konstanta untuk perhitungan pips berdasarkan pair
-        const PIP_CONFIG = {
-            'XAUUSD': 0.01,     // 1 pip = 0.01 untuk Gold
-            'EURUSD': 0.0001,   // 1 pip = 0.0001 untuk major pairs
-            'GBPUSD': 0.0001,
-            'USDJPY': 0.01,     // 1 pip = 0.01 untuk JPY pairs
-            'BTCUSD': 1.00      // 1 pip = 1 untuk Bitcoin
-        };
-
         let trades = [];
         let currentAction = 'Buy';
         let currentReason = 'TP';
+        let deferredPrompt;
 
         const el = {
             list: document.getElementById('trade-list'),
@@ -266,361 +180,90 @@
             toastMsg: document.getElementById('toast-msg'),
             statTotal: document.getElementById('stat-total'),
             statWinrate: document.getElementById('stat-winrate'),
-            statAvgRR: document.getElementById('stat-avg-rr'),
-            statAvgHold: document.getElementById('stat-avg-hold'),
-            statMaxWinStreak: document.getElementById('stat-max-win-streak'),
-            statMaxLossStreak: document.getElementById('stat-max-loss-streak'),
-            statAvgTPPips: document.getElementById('stat-avg-tp-pips'),
-            statAvgSLPips: document.getElementById('stat-avg-sl-pips'),
-            statAvgMonthlyPips: document.getElementById('stat-avg-monthly-pips'),
-            statProfitFactor: document.getElementById('stat-profit-factor'),
-            statWinProb: document.getElementById('stat-win-prob'),
-            statExpectedRR: document.getElementById('stat-expected-rr'),
-            probValue: document.getElementById('prob-value'),
-            probBar: document.getElementById('prob-bar'),
-            monthlyStats: document.getElementById('monthly-stats'),
-            toggleStats: document.getElementById('toggle-stats'),
-            advancedStats: document.getElementById('advanced-stats'),
             fDateIn: document.getElementById('f-date-in'),
-            fDateOut: document.getElementById('f-date-out')
+            fDateOut: document.getElementById('f-date-out'),
+            installBanner: document.getElementById('install-banner')
         };
 
-        // Initialize Dates
-        const now = new Date();
-        const todayStr = now.toISOString().slice(0, 16);
-        const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
-        const oneHourLaterStr = oneHourLater.toISOString().slice(0, 16);
-        
-        el.fDateIn.value = todayStr;
-        el.fDateOut.value = oneHourLaterStr;
+        // --- PWA LOGIC ---
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            el.installBanner.style.display = 'block';
+        });
 
-        // Helper Functions
+        el.installBanner.onclick = async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') el.installBanner.style.display = 'none';
+                deferredPrompt = null;
+            }
+        };
+
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                const CACHE = 'bt-v3';
+                self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html', './manifest.json']))));
+                self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
+                self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))));
+            `;
+            const blob = new Blob([swCode], {type: 'application/javascript'});
+            navigator.serviceWorker.register(URL.createObjectURL(blob));
+        }
+
+        // --- APP LOGIC ---
+        const today = new Date().toISOString().split('T')[0];
+        el.fDateIn.value = today;
+        el.fDateOut.value = today;
+
         const showToast = (msg) => {
             el.toastMsg.innerText = msg;
             el.toast.classList.remove('hidden');
             setTimeout(() => el.toast.classList.add('hidden'), 3000);
         };
 
-        const formatDateForDisplay = (dateStr) => {
-            if (!dateStr) return "";
-            try {
-                const d = new Date(dateStr);
-                return d.toLocaleDateString('id-ID', { 
-                    day: '2-digit', 
-                    month: 'short', 
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            } catch {
-                return dateStr;
-            }
-        };
-
         const formatDateToCSV = (dateStr) => {
             if (!dateStr) return "";
-            return new Date(dateStr).toISOString();
-        };
-
-        const parseDateFromCSV = (dateStr) => {
-            return new Date(dateStr);
-        };
-
-        // Calculate pips berdasarkan pair
-        const calculatePips = (entry, exit, pair) => {
-            const pipValue = PIP_CONFIG[pair] || 0.0001;
-            const diff = Math.abs(exit - entry);
-            return Math.round(diff / pipValue);
-        };
-
-        // Calculate Risk Reward Ratio
-        const calculateRR = (trade) => {
-            if (!trade.SL || !trade.TP || !trade.Entry) return 0;
-            
-            const entry = parseFloat(trade.Entry);
-            const sl = parseFloat(trade.SL);
-            const tp = parseFloat(trade.TP);
-            
-            if (isNaN(entry) || isNaN(sl) || isNaN(tp)) return 0;
-            
-            if (trade.Action === 'Buy') {
-                const risk = Math.abs(entry - sl);
-                const reward = Math.abs(tp - entry);
-                return risk > 0 ? (reward / risk).toFixed(2) : 0;
-            } else {
-                const risk = Math.abs(sl - entry);
-                const reward = Math.abs(entry - tp);
-                return risk > 0 ? (reward / risk).toFixed(2) : 0;
-            }
-        };
-
-        // Calculate holding period in days
-        const calculateHoldingDays = (trade) => {
-            try {
-                const entryDate = parseDateFromCSV(trade['Tanggal Entry']);
-                const exitDate = parseDateFromCSV(trade['Tanggal Exit']);
-                const diffMs = exitDate - entryDate;
-                const days = diffMs / (1000 * 60 * 60 * 24);
-                return Math.max(0, Math.round(days * 10) / 10); // Bulatkan ke 1 desimal
-            } catch {
-                return 0;
-            }
-        };
-
-        // Calculate probability based on historical data (hanya keberhasilan/win)
-        const calculateProbability = (trades) => {
-            if (trades.length === 0) return 0;
-            
-            const winningTrades = trades.filter(t => t.Keterangan === 'TP').length;
-            const probability = (winningTrades / trades.length) * 100;
-            
-            return Math.min(Math.max(probability, 0), 100); // Pastikan antara 0-100%
-        };
-
-        const calculateAverageRR = (trades) => {
-            if (trades.length === 0) return 0;
-            
-            let totalRR = 0;
-            let count = 0;
-            
-            trades.forEach(trade => {
-                const rr = parseFloat(calculateRR(trade)) || 0;
-                if (rr > 0) {
-                    totalRR += rr;
-                    count++;
-                }
-            });
-            
-            return count > 0 ? (totalRR / count).toFixed(2) : "0.00";
-        };
-
-        const calculateStreaks = (trades) => {
-            let currentWinStreak = 0;
-            let currentLossStreak = 0;
-            let maxWinStreak = 0;
-            let maxLossStreak = 0;
-            
-            trades.forEach(trade => {
-                if (trade.Keterangan === 'TP') {
-                    currentWinStreak++;
-                    currentLossStreak = 0;
-                    if (currentWinStreak > maxWinStreak) {
-                        maxWinStreak = currentWinStreak;
-                    }
-                } else if (trade.Keterangan === 'SL') {
-                    currentLossStreak++;
-                    currentWinStreak = 0;
-                    if (currentLossStreak > maxLossStreak) {
-                        maxLossStreak = currentLossStreak;
-                    }
-                }
-            });
-            
-            return { maxWinStreak, maxLossStreak };
-        };
-
-        const calculateAveragePips = (trades) => {
-            const tpTrades = trades.filter(t => t.Keterangan === 'TP' && t.Pips);
-            const slTrades = trades.filter(t => t.Keterangan === 'SL' && t.Pips);
-            
-            const avgTPPips = tpTrades.length > 0 ? 
-                Math.round(tpTrades.reduce((sum, trade) => sum + (parseInt(trade.Pips) || 0), 0) / tpTrades.length) : 0;
-                
-            const avgSLPips = slTrades.length > 0 ? 
-                Math.round(slTrades.reduce((sum, trade) => sum + (parseInt(trade.Pips) || 0), 0) / slTrades.length) : 0;
-                
-            return { avgTPPips, avgSLPips };
-        };
-
-        const calculateMonthlyPerformance = (trades) => {
-            if (trades.length === 0) return { avgMonthlyPips: 0, monthlyBreakdown: [] };
-            
-            const monthlyData = {};
-            
-            trades.forEach(trade => {
-                try {
-                    const date = parseDateFromCSV(trade['Tanggal Entry']);
-                    const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                    
-                    if (!monthlyData[monthYear]) {
-                        monthlyData[monthYear] = { totalPips: 0, count: 0 };
-                    }
-                    
-                    const pips = parseInt(trade.Pips) || 0;
-                    const adjustedPips = trade.Keterangan === 'TP' ? pips : -pips;
-                    
-                    monthlyData[monthYear].totalPips += adjustedPips;
-                    monthlyData[monthYear].count++;
-                } catch (e) {
-                    console.log("Error processing trade for monthly data:", e);
-                }
-            });
-            
-            // Calculate average monthly pips
-            const months = Object.keys(monthlyData);
-            const totalMonths = months.length;
-            const totalPips = Object.values(monthlyData).reduce((sum, data) => sum + data.totalPips, 0);
-            const avgMonthlyPips = totalMonths > 0 ? Math.round(totalPips / totalMonths) : 0;
-            
-            // Prepare breakdown
-            const monthlyBreakdown = months.map(month => {
-                const data = monthlyData[month];
-                const avgPips = data.count > 0 ? Math.round(data.totalPips / data.count) : 0;
-                return {
-                    month,
-                    avgPips,
-                    totalPips: data.totalPips,
-                    totalTrades: data.count
-                };
-            });
-            
-            return { avgMonthlyPips, monthlyBreakdown };
-        };
-
-        const calculateProfitFactor = (trades) => {
-            const winningTrades = trades.filter(t => t.Keterangan === 'TP');
-            const losingTrades = trades.filter(t => t.Keterangan === 'SL');
-            
-            // Hitung berdasarkan pips untuk menghindari $
-            const totalProfitPips = winningTrades.reduce((sum, trade) => {
-                return sum + (parseInt(trade.Pips) || 0);
-            }, 0);
-            
-            const totalLossPips = losingTrades.reduce((sum, trade) => {
-                return sum + (parseInt(trade.Pips) || 0);
-            }, 0);
-            
-            return totalLossPips > 0 ? (totalProfitPips / totalLossPips).toFixed(2) : '∞';
-        };
-
-        const calculateExpectedRR = (winProbability, avgRR) => {
-            const winProb = parseFloat(winProbability) / 100 || 0;
-            const avgRr = parseFloat(avgRR) || 0;
-            return (winProb * avgRr).toFixed(2);
+            const d = new Date(dateStr);
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            return `${String(d.getDate()).padStart(2, '0')}-${months[d.getMonth()]}-${d.getFullYear()}`;
         };
 
         const updateStats = () => {
             el.statTotal.innerText = trades.length;
-            
-            if (trades.length === 0) {
-                el.statWinrate.innerText = '0%';
-                el.statAvgRR.innerText = '0.00';
-                el.statAvgHold.innerText = '0';
-                el.statMaxWinStreak.innerText = '0';
-                el.statMaxLossStreak.innerText = '0';
-                el.statAvgTPPips.innerText = '0';
-                el.statAvgSLPips.innerText = '0';
-                el.statAvgMonthlyPips.innerText = '0';
-                el.statProfitFactor.innerText = '0.00';
-                el.statWinProb.innerText = '0%';
-                el.statExpectedRR.innerText = '0.00';
-                el.probValue.innerText = '0%';
-                el.probBar.style.width = '0%';
-                el.monthlyStats.innerHTML = '<p class="text-center py-2">Belum ada data bulanan</p>';
-                return;
-            }
-            
-            // Basic stats
             const wins = trades.filter(t => t.Keterangan === 'TP').length;
-            const wr = Math.round((wins / trades.length) * 100);
+            const wr = trades.length ? Math.round((wins / trades.length) * 100) : 0;
             el.statWinrate.innerText = wr + '%';
-            
-            // Advanced stats
-            const avgRR = calculateAverageRR(trades);
-            el.statAvgRR.innerText = avgRR;
-            
-            const avgHoldDays = trades.reduce((sum, trade) => {
-                return sum + calculateHoldingDays(trade);
-            }, 0) / trades.length;
-            el.statAvgHold.innerText = avgHoldDays.toFixed(1) + 'd';
-            
-            const streaks = calculateStreaks(trades);
-            el.statMaxWinStreak.innerText = streaks.maxWinStreak;
-            el.statMaxLossStreak.innerText = streaks.maxLossStreak;
-            
-            const pipsStats = calculateAveragePips(trades);
-            el.statAvgTPPips.innerText = pipsStats.avgTPPips;
-            el.statAvgSLPips.innerText = pipsStats.avgSLPips;
-            
-            const monthlyStats = calculateMonthlyPerformance(trades);
-            el.statAvgMonthlyPips.innerText = monthlyStats.avgMonthlyPips;
-            
-            const profitFactor = calculateProfitFactor(trades);
-            el.statProfitFactor.innerText = profitFactor;
-            
-            // Probability (hanya keberhasilan)
-            const probability = calculateProbability(trades);
-            el.statWinProb.innerText = Math.round(probability) + '%';
-            el.probValue.innerText = Math.round(probability) + '%';
-            el.probBar.style.width = Math.min(probability, 100) + '%';
-            
-            // Expected RR
-            const expectedRR = calculateExpectedRR(probability, avgRR);
-            el.statExpectedRR.innerText = expectedRR;
-            
-            // Monthly breakdown
-            if (monthlyStats.monthlyBreakdown.length > 0) {
-                let html = '<div class="space-y-2">';
-                monthlyStats.monthlyBreakdown.forEach(data => {
-                    const pipsClass = data.totalPips >= 0 ? 'text-[#36E2A0]' : 'text-[#FF5F6D]';
-                    const monthName = new Date(data.month + '-01').toLocaleDateString('id-ID', { 
-                        month: 'short', 
-                        year: 'numeric' 
-                    });
-                    
-                    html += `
-                        <div class="flex justify-between items-center">
-                            <span class="text-[11px]">${monthName}</span>
-                            <div class="text-right">
-                                <div class="font-bold ${pipsClass}">${data.totalPips >= 0 ? '+' : ''}${data.totalPips} pips</div>
-                                <div class="text-[10px] text-gray-500">${data.avgPips} avg • ${data.totalTrades} trades</div>
-                            </div>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-                el.monthlyStats.innerHTML = html;
-            }
         };
 
         const renderTrades = () => {
-            el.list.innerHTML = trades.length === 0 ? 
-                `<div class="text-center py-20 opacity-20">
-                    <i data-lucide="trending-up" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
-                    <p class="text-sm">Belum ada data trading</p>
-                    <p class="text-[10px] text-gray-500 mt-1">Tambahkan data untuk melihat analisis</p>
-                </div>` : "";
-            
+            el.list.innerHTML = trades.length === 0 ? `<div class="text-center py-20 opacity-20"><p>Belum ada data jurnal</p></div>` : "";
             trades.forEach((t, idx) => {
-                const pips = t.Pips || 0;
-                const displayPips = t.Keterangan === 'TP' ? `+${pips} pips` : `-${pips} pips`;
-                
                 const div = document.createElement('div');
-                div.className = "glass p-4 rounded-2xl flex items-center justify-between";
+                div.className = "glass p-4 rounded-2xl flex items-center justify-between animate-slide-up";
                 div.innerHTML = `
                     <div class="flex items-center gap-3">
-                        <div class="w-1 h-10 rounded-full ${t.Action === 'Buy' ? 'bg-[#36E2A0]' : 'bg-[#FF5F6D]'}"></div>
+                        <div class="w-1.5 h-10 rounded-full ${t.Action === 'Buy' ? 'bg-[#36E2A0]' : 'bg-[#FF5F6D]'}"></div>
                         <div>
                             <div class="flex items-center gap-2">
                                 <span class="font-bold text-sm">${t.Pair}</span>
                                 <span class="text-[9px] font-black px-1.5 py-0.5 rounded ${t.Action === 'Buy' ? 'bg-[#36E2A0]/10 text-[#36E2A0]' : 'bg-[#FF5F6D]/10 text-[#FF5F6D]'}">${t.Action.toUpperCase()}</span>
                             </div>
-                            <p class="text-[10px] text-gray-500 mt-0.5">${formatDateForDisplay(t['Tanggal Entry'])}</p>
-                            <p class="text-[9px] text-gray-600 mt-0.5">Hold: ${calculateHoldingDays(t).toFixed(1)} hari</p>
+                            <p class="text-[10px] text-gray-500 mt-0.5">${t['Tanggal Entry']}</p>
                         </div>
                     </div>
                     <div class="text-right flex items-center gap-4">
                         <div>
-                            <p class="text-xs font-black ${t.Keterangan === 'TP' ? 'text-[#36E2A0]' : 'text-[#FF5F6D]'}">${displayPips}</p>
-                            <p class="text-[10px] font-mono text-gray-500">${t.Entry} → ${t.Keterangan === 'TP' ? t.TP : t.SL}</p>
-                            <p class="text-[9px] text-gray-600">RR: ${t.RR || calculateRR(t)}</p>
+                            <p class="text-xs font-black ${t.Keterangan === 'TP' ? 'text-[#36E2A0]' : 'text-[#FF5F6D]'}">${t.Keterangan}</p>
+                            <p class="text-[10px] font-mono text-gray-400">${t.Entry}</p>
                         </div>
-                        <button onclick="removeTrade(${idx})" class="text-gray-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <button onclick="removeTrade(${idx})" class="p-2 text-gray-600 active:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </div>
                 `;
                 el.list.appendChild(div);
             });
-            
             lucide.createIcons();
             updateStats();
         };
@@ -631,7 +274,7 @@
             showToast("Data dihapus");
         };
 
-        // Form Logic
+        // Toggles
         document.querySelectorAll('.toggle-action').forEach(btn => {
             btn.onclick = () => {
                 currentAction = btn.dataset.val;
@@ -659,167 +302,83 @@
 
         el.form.onsubmit = (e) => {
             e.preventDefault();
-            
-            const pair = document.getElementById('f-pair').value;
-            const entry = parseFloat(document.getElementById('f-entry').value);
-            const tp = parseFloat(document.getElementById('f-tp').value);
-            const sl = parseFloat(document.getElementById('f-sl').value);
-            
-            if (isNaN(entry) || isNaN(tp) || isNaN(sl)) {
-                showToast("Harap isi semua harga dengan benar");
-                return;
-            }
-            
-            const pips = calculatePips(entry, currentReason === 'TP' ? tp : sl, pair);
-            
             const newTrade = {
-                Pair: pair,
+                Pair: document.getElementById('f-pair').value || "XAUUSD",
                 Action: currentAction,
                 'Tanggal Entry': formatDateToCSV(el.fDateIn.value),
                 'Tanggal Exit': formatDateToCSV(el.fDateOut.value),
-                Entry: entry.toFixed(2),
-                TP: tp.toFixed(2),
-                SL: sl.toFixed(2),
-                Keterangan: currentReason,
-                Pips: pips,
-                RR: calculateRR({
-                    Action: currentAction,
-                    Entry: entry,
-                    TP: tp,
-                    SL: sl
-                })
+                Entry: document.getElementById('f-entry').value || "0",
+                TP: document.getElementById('f-tp').value || "0",
+                SL: document.getElementById('f-sl').value || "0",
+                Keterangan: currentReason
             };
-            
             trades.unshift(newTrade);
             renderTrades();
             el.overlay.classList.add('hidden');
-            
-            // Reset form
-            document.getElementById('f-entry').value = '';
-            document.getElementById('f-tp').value = '';
-            document.getElementById('f-sl').value = '';
-            
-            showToast("Trade berhasil disimpan");
+            showToast("Berhasil disimpan");
         };
 
-        // Voice Logic
+        // Voice
         el.btnVoice.onclick = () => {
-            const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if(!Recognition) return showToast("Mic tidak didukung browser");
-            
-            const rec = new Recognition();
+            const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if(!Rec) return showToast("Mic tidak didukung");
+            const rec = new Rec();
             rec.lang = 'id-ID';
-            rec.onstart = () => {
-                el.btnVoice.classList.add('bg-red-500', 'animate-pulse');
-                showToast("Mendengarkan...");
-            };
+            rec.onstart = () => el.btnVoice.classList.add('bg-red-500', 'animate-pulse');
             rec.onend = () => el.btnVoice.classList.remove('bg-red-500', 'animate-pulse');
             rec.onresult = (e) => {
                 const text = e.results[0][0].transcript.toLowerCase();
-                
                 if(text.includes("buy")) document.querySelector('.toggle-action[data-val="Buy"]').click();
                 if(text.includes("sell")) document.querySelector('.toggle-action[data-val="Sell"]').click();
-                if(text.includes("tp") || text.includes("take profit")) document.querySelector('.toggle-reason[data-val="TP"]').click();
-                if(text.includes("sl") || text.includes("stop loss")) document.querySelector('.toggle-reason[data-val="SL"]').click();
-                
-                // Extract numbers for prices
+                if(text.includes("tp")) document.querySelector('.toggle-reason[data-val="TP"]').click();
+                if(text.includes("sl")) document.querySelector('.toggle-reason[data-val="SL"]').click();
                 const nums = text.match(/\d+(\.\d+)?/g);
-                if(nums) {
+                if(nums){
                     if(nums[0]) document.getElementById('f-entry').value = nums[0];
                     if(nums[1]) document.getElementById('f-sl').value = nums[1];
                     if(nums[2]) document.getElementById('f-tp').value = nums[2];
                 }
-                
-                // Extract pair
-                if(text.includes("gold") || text.includes("xau")) document.getElementById('f-pair').value = "XAUUSD";
-                if(text.includes("euro")) document.getElementById('f-pair').value = "EURUSD";
-                if(text.includes("pound") || text.includes("gbp")) document.getElementById('f-pair').value = "GBPUSD";
-                if(text.includes("yen") || text.includes("jpy")) document.getElementById('f-pair').value = "USDJPY";
-                if(text.includes("bitcoin") || text.includes("btc")) document.getElementById('f-pair').value = "BTCUSD";
-                
-                showToast("Data suara diproses");
+                showToast("Suara diproses");
             };
             rec.start();
         };
 
-        // File Operations
+        // CSV
         el.csvUpload.onchange = (e) => {
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onload = (evt) => {
                 const rows = evt.target.result.split(/\r?\n/).filter(r => r.trim());
-                const headers = rows[0].split(';');
-                
+                if(rows.length < 2) return;
+                const h = rows[0].split(';');
                 trades = rows.slice(1).map(row => {
-                    const vals = row.split(';');
-                    const obj = {};
-                    headers.forEach((h, i) => obj[h.trim()] = vals[i] || "");
-                    
-                    // Calculate pips if missing
-                    if (!obj.Pips && obj.Entry && (obj.TP || obj.SL) && obj.Pair) {
-                        const entry = parseFloat(obj.Entry);
-                        const exit = parseFloat(obj.Keterangan === 'TP' ? obj.TP : obj.SL);
-                        obj.Pips = calculatePips(entry, exit, obj.Pair);
-                    }
-                    
-                    // Calculate RR if missing
-                    if (!obj.RR && obj.Entry && obj.TP && obj.SL) {
-                        obj.RR = calculateRR(obj);
-                    }
-                    
+                    const v = row.split(';');
+                    let obj = {};
+                    h.forEach((name, i) => obj[name.trim()] = v[i]?.trim() || "");
                     return obj;
-                }).filter(t => t.Pair); // Filter out empty rows
-                
+                });
                 renderTrades();
-                showToast(`${trades.length} data diimpor`);
+                showToast("Impor berhasil");
             };
             reader.readAsText(file);
         };
 
         el.csvDownload.onclick = () => {
-            if(trades.length === 0) return showToast("Tidak ada data");
-            
-            const header = "Pair;Action;Tanggal Entry;Tanggal Exit;Entry;TP;SL;Keterangan;Pips;RR";
-            const body = trades.map(t => 
-                `${t.Pair};${t.Action};${t['Tanggal Entry']};${t['Tanggal Exit']};${t.Entry};${t.TP};${t.SL};${t.Keterangan};${t.Pips || 0};${t.RR || 0}`
-            ).join('\n');
-            
-            const blob = new Blob([header + '\n' + body], { type: 'text/csv' });
+            const h = "Pair;Action;Tanggal Entry;Tanggal Exit;Entry;TP;SL;Keterangan";
+            const b = trades.map(t => `${t.Pair};${t.Action};${t['Tanggal Entry']};${t['Tanggal Exit']};${t.Entry};${t.TP};${t.SL};${t.Keterangan}`).join('\n');
+            const blob = new Blob([h + '\n' + b], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `backtest_${new Date().toISOString().slice(0,10)}.csv`;
+            a.href = url;
+            a.download = `backtest_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
         };
 
-        // Toggle advanced stats
-        el.toggleStats.onclick = () => {
-            if(el.advancedStats.classList.contains('hidden')) {
-                el.advancedStats.classList.remove('hidden');
-                el.toggleStats.textContent = 'Sembunyikan Detail';
-            } else {
-                el.advancedStats.classList.add('hidden');
-                el.toggleStats.textContent = 'Tampilkan Detail';
-            }
-        };
-
-        // Navigation
         el.fab.onclick = () => el.overlay.classList.remove('hidden');
         el.btnClose.onclick = () => el.overlay.classList.add('hidden');
 
-        // Service Worker Registration for PWA
-        if ('serviceWorker' in navigator) {
-            const swCode = `
-                self.addEventListener('install', e => e.waitUntil(caches.open('bt-v2').then(c => c.addAll(['./index.html']))));
-                self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
-                self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== 'bt-v2').map(k => caches.delete(k))))));
-            `;
-            const blob = new Blob([swCode], {type: 'application/javascript'});
-            const url = URL.createObjectURL(blob);
-            navigator.serviceWorker.register(url);
-        }
-
-        // Initialize
         renderTrades();
     </script>
 </body>
 </html>
+

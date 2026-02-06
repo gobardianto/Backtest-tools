@@ -1,2 +1,24 @@
-    <!-- Manifest Inline -->
-    <link rel="manifest" href='data:application/json;base64,ewogICJuYW1lIjogIkJhY2t0ZXN0IFBybyIsCiAgInNob3J0X25hbWUiOiAiQlQgUHJvIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaWNvbi0xOTJ4MTkyLnBuZyIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIKICAgIH0sCiAgICB7CiAgICAgICJzcmMiOiAiaWNvbi01MTJ4NTEyLnBuZyIsCiAgICAgICJzaXplcyI6ICI1MTJ4NTEyIiwKICAgICAgInR5cGUiOiAiaW1hZ2UvcG5nIgogICAgfQogIF0sCiAgInN0YXJ0X3VybCI6ICIuL2luZGV4Lmh0bWwiLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwRTBFMTIiLAogICJ0aGVtZV9jb2xvciI6ICIjNkY3Q0ZGIgp9'>
+{
+  "name": "Backtest Pro Voice",
+  "short_name": "BACKTEST",
+  "description": "Jurnal Backtest Trading dengan Fitur Suara",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0E0E12",
+  "theme_color": "#6F7CFF",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
