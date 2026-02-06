@@ -3,381 +3,484 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Backtest Pro PWA</title>
-    
-    <!-- PWA Meta Tags -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#0E0E12">
-    
-    <!-- Link ke Manifest file -->
-    <link rel="manifest" href="manifest.json">
-
-    <!-- Tailwind CSS & Lucide Icons -->
+    <title>Backtest Tools</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    
     <style>
-        body { background-color: #0E0E12; color: white; -webkit-tap-highlight-color: transparent; }
-        .glass { background: rgba(23, 23, 31, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
-        .input-dark { background-color: #17171F; border: 1px solid rgba(255,255,255,0.05); outline: none; transition: border-color 0.2s; }
-        .input-dark:focus { border-color: #6F7CFF; }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .animate-slide-up { animation: slideUp 0.3s ease-out; }
-        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.5; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         
-        /* PWA Install Banner */
-        #install-banner {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: #6F7CFF;
-            color: white;
-            padding: 12px;
-            text-align: center;
-            z-index: 100;
-            font-weight: bold;
-            cursor: pointer;
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0a0a0c;
+            color: #e2e8f0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .glass-card {
+            background: #141417;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .modal-enter { animation: modalFadeIn 0.3s ease-out; }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
-<body class="font-sans antialiased">
+<body class="pb-10">
 
-    <!-- Banner Instalasi Kustom -->
-    <div id="install-banner">
-        ✨ Klik di sini untuk Instal Aplikasi di HP
-    </div>
-
-    <div id="app" class="pb-32">
-        <!-- Header -->
-        <header class="px-5 pt-12 pb-4 sticky top-0 bg-[#0E0E12]/90 backdrop-blur-md z-40 flex items-center justify-between">
-            <h1 class="text-lg font-black tracking-tighter italic">Backtest<span></span></h1>
-            <div class="flex gap-2">
-                <label class="p-2.5 rounded-xl glass active:bg-white/10 cursor-pointer">
-                    <input type="file" id="csv-upload" accept=".csv" class="hidden">
-                    <i data-lucide="upload" class="w-5 h-5"></i>
-                </label>
-                <button id="csv-download" class="p-2.5 rounded-xl glass active:bg-white/10">
+    <!-- Header -->
+    <nav class="sticky top-0 z-40 bg-[#0a0a0c]/80 backdrop-blur-lg border-b border-white/5 px-5 py-4">
+        <div class="max-w-xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <i data-lucide="bar-chart-3" class="text-white w-5 h-5"></i>
+                </div>
+                <h1 class="text-sm font-extrabold tracking-tight text-white uppercase">Backtest Tools</h1>
+            </div>
+            <div class="flex gap-1">
+                <button onclick="exportCSV()" class="p-2.5 hover:bg-white/5 rounded-full transition-colors text-slate-400" title="Unduh CSV">
                     <i data-lucide="download" class="w-5 h-5"></i>
                 </button>
-            </div>
-        </header>
-
-        <!-- Ringkasan Statistik -->
-        <div class="px-5 flex gap-3 mb-6">
-            <div class="flex-1 glass p-4 rounded-3xl">
-                <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Total Trades</p>
-                <p id="stat-total" class="text-2xl font-black">0</p>
-            </div>
-            <div class="flex-1 glass p-4 rounded-3xl">
-                <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Win Rate</p>
-                <p id="stat-winrate" class="text-2xl font-black text-[#36E2A0]">0%</p>
-            </div>
-        </div>
-
-        <!-- Daftar Transaksi -->
-        <div id="trade-list" class="px-5 space-y-3">
-            <!-- Data akan dirender di sini -->
-        </div>
-
-        <!-- Tombol Tambah Floating -->
-        <button id="fab-add" class="fixed bottom-8 right-6 w-16 h-16 bg-[#6F7CFF] rounded-full flex items-center justify-center shadow-2xl shadow-[#6F7CFF]/40 active:scale-90 transition-transform z-30">
-            <i data-lucide="plus" class="w-8 h-8 text-white stroke-[3]"></i>
-        </button>
-
-        <!-- Formulir Overlay -->
-        <div id="overlay" class="fixed inset-0 z-50 bg-[#0E0E12] hidden overflow-y-auto px-5 py-8">
-            <div class="flex items-center justify-between mb-8">
-                <button id="btn-close" class="p-2 -ml-2 text-gray-400"><i data-lucide="x"></i></button>
-                <h2 class="text-xs font-black uppercase tracking-widest text-center">Input Jurnal</h2>
-                <button id="btn-voice" class="p-3 rounded-full bg-[#6F7CFF] shadow-lg shadow-[#6F7CFF]/30 active:scale-90">
-                    <i data-lucide="mic" class="w-5 h-5 text-white"></i>
+                <button onclick="triggerImport()" class="p-2.5 hover:bg-white/5 rounded-full transition-colors text-slate-400" title="Unggah CSV">
+                    <i data-lucide="upload" class="w-5 h-5"></i>
                 </button>
+                <input type="file" id="csvFile" class="hidden" accept=".csv" onchange="importCSV(event)">
             </div>
+        </div>
+    </nav>
 
-            <form id="trade-form" class="space-y-5">
-                <div class="grid grid-cols-2 glass p-1.5 rounded-2xl">
-                    <button type="button" data-val="Buy" class="toggle-action py-3 rounded-xl text-xs font-black transition-all bg-[#36E2A0] text-black">BUY</button>
-                    <button type="button" data-val="Sell" class="toggle-action py-3 rounded-xl text-xs font-black transition-all text-gray-500">SELL</button>
-                </div>
+    <main class="max-w-xl mx-auto p-5 space-y-6">
+        
+        <!-- Input Settings -->
+        <section class="grid grid-cols-2 gap-3">
+            <div class="glass-card p-3.5 rounded-[1.2rem]">
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Initial Balance</label>
+                <input type="number" id="balanceInput" value="10000" onchange="updateBalance(this.value)" 
+                    class="bg-transparent text-white font-extrabold text-base outline-none w-full">
+            </div>
+            <div class="glass-card p-3.5 rounded-[1.2rem]">
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Lot Size</label>
+                <input type="number" id="lotInput" step="0.01" value="0.01" onchange="updateLot(this.value)"
+                    class="bg-transparent text-white font-extrabold text-base outline-none w-full">
+            </div>
+        </section>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Pair</label>
-                        <input id="f-pair" type="text" value="XAUUSD" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm">
-                    </div>
-                    <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Status Close</label>
-                        <div class="flex glass p-1 rounded-xl">
-                            <button type="button" data-val="TP" class="toggle-reason flex-1 py-2 rounded-lg text-[10px] font-black transition-all bg-white/10 text-white">TP</button>
-                            <button type="button" data-val="SL" class="toggle-reason flex-1 py-2 rounded-lg text-[10px] font-black transition-all text-gray-600">SL</button>
+        <!-- Dynamic Summary Area -->
+        <div id="summaryArea">
+            <!-- Akan diisi oleh JavaScript -->
+            <div class="h-40 flex flex-col items-center justify-center glass-card rounded-[2rem] text-slate-500">
+                <i data-lucide="file-spreadsheet" class="w-8 h-8 mb-2 opacity-20"></i>
+                <p class="text-xs font-medium tracking-tight">Belum ada data backtest</p>
+            </div>
+        </div>
+
+        <!-- Trade History Header -->
+        <div class="flex justify-between items-center px-2 pt-2">
+            <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Trade History</h3>
+            <button onclick="openModal()" class="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-full text-[10px] font-bold shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> TAMBAH DATA
+            </button>
+        </div>
+
+        <!-- History List -->
+        <div id="historyList" class="space-y-2.5">
+            <!-- Akan diisi oleh JavaScript -->
+        </div>
+
+    </main>
+
+    <!-- Modal Form -->
+    <div id="modal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal()"></div>
+        <div class="relative w-full max-w-md bg-[#141417] rounded-t-[2rem] sm:rounded-[2.5rem] border-t border-white/10 p-7 shadow-2xl modal-enter">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="modalTitle" class="text-sm font-bold text-white uppercase tracking-tighter">Tambah Trade</h3>
+                <button onclick="closeModal()" class="text-slate-500 p-1 hover:text-white transition-colors"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <form id="tradeForm" class="space-y-4">
+                <input type="hidden" id="editId">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-white/5 rounded-xl border border-white/5 p-3">
+                        <p class="text-[9px] font-bold text-slate-500 uppercase mb-2">Direction</p>
+                        <div class="flex gap-1.5 p-1 bg-black/20 rounded-lg">
+                            <button type="button" id="typeBuy" onclick="setType('Buy')" class="flex-1 py-1.5 rounded-md text-[10px] font-black bg-white text-black transition-all">BUY</button>
+                            <button type="button" id="typeSell" onclick="setType('Sell')" class="flex-1 py-1.5 rounded-md text-[10px] font-black text-slate-500 transition-all">SELL</button>
                         </div>
                     </div>
-                </div>
-
-                <div class="space-y-1.5">
-                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Entry Price</label>
-                    <input id="f-entry" type="number" step="any" inputmode="decimal" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm" placeholder="0.00">
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1 text-[#36E2A0]">TP Price</label>
-                        <input id="f-tp" type="number" step="any" inputmode="decimal" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-[#36E2A0]" placeholder="0.00">
-                    </div>
-                    <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1 text-[#FF5F6D]">SL Price</label>
-                        <input id="f-sl" type="number" step="any" inputmode="decimal" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-[#FF5F6D]" placeholder="0.00">
+                    <div class="bg-white/5 rounded-xl border border-white/5 p-3 flex flex-col justify-center">
+                        <p class="text-[9px] font-bold text-slate-500 uppercase mb-1">Instrument</p>
+                        <p class="text-xs font-extrabold text-white">XAUUSD</p>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Tgl Entry</label>
-                        <input id="f-date-in" type="date" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-white">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-1">Open Date</label>
+                        <input type="date" id="openDate" required class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500">
                     </div>
-                    <div class="space-y-1.5">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Tgl Exit</label>
-                        <input id="f-date-out" type="date" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-white">
+                    <div>
+                        <label class="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-1">Close Date</label>
+                        <input type="date" id="closeDate" required class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500">
                     </div>
                 </div>
 
-                <div class="pt-4 pb-10">
-                    <button type="submit" class="w-full bg-[#6F7CFF] py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform">
-                        SIMPAN JURNAL
-                    </button>
+                <div>
+                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-1">Entry Price</label>
+                    <input type="number" id="entryPrice" step="0.01" required class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs font-bold text-white outline-none">
                 </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[9px] font-bold text-emerald-500 uppercase ml-1 block mb-1">Take Profit</label>
+                        <input type="number" id="tpPrice" step="0.01" required class="w-full bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-3 text-xs font-bold text-emerald-400 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[9px] font-bold text-rose-500 uppercase ml-1 block mb-1">Stop Loss</label>
+                        <input type="number" id="slPrice" step="0.01" required class="w-full bg-rose-500/5 border border-rose-500/10 rounded-xl p-3 text-xs font-bold text-rose-400 outline-none">
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase text-center mb-3">Hasil Akhir</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" id="resultTP" onclick="setResult('TP')" class="py-3 rounded-2xl border-2 border-emerald-500 bg-emerald-500/20 text-emerald-400 text-xs font-black">HIT TP</button>
+                        <button type="button" id="resultSL" onclick="setResult('SL')" class="py-3 rounded-2xl border-2 border-transparent bg-white/5 text-slate-500 text-xs font-black">HIT SL</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-extrabold text-xs tracking-widest mt-4 shadow-xl shadow-indigo-500/20 transition-all">CONFIRM TRADE</button>
             </form>
-        </div>
-
-        <!-- Notifikasi Toast -->
-        <div id="toast" class="fixed bottom-28 left-5 right-5 z-[100] glass rounded-2xl p-4 hidden flex items-center gap-3 animate-slide-up">
-            <i data-lucide="check-circle" class="w-5 h-5 text-[#36E2A0]"></i>
-            <span id="toast-msg" class="text-xs font-bold">Pesan</span>
         </div>
     </div>
 
     <script>
+        let trades = [];
+        let lotSize = 0.01;
+        let initialBalance = 10000;
+        let currentType = 'Buy';
+        let currentResult = 'TP';
+
+        // Initialize icons
         lucide.createIcons();
 
-        let trades = [];
-        let currentAction = 'Buy';
-        let currentReason = 'TP';
-        let deferredPrompt;
+        // --- CORE LOGIC ---
+        function calculateStats() {
+            if (trades.length === 0) return null;
+            
+            const sorted = [...trades].sort((a, b) => new Date(a.openDate) - new Date(b.openDate));
+            
+            let totalProfit = 0, totalPips = 0, totalRR = 0, totalDur = 0, wins = 0;
+            let maxCPips = 0, maxCLPips = 0, maxCCount = 0, maxCLCount = 0;
+            let curCP = 0, curCL = 0, curCC = 0, curCLC = 0;
+            const months = new Set();
+            const years = new Set();
 
-        const el = {
-            list: document.getElementById('trade-list'),
-            form: document.getElementById('trade-form'),
-            overlay: document.getElementById('overlay'),
-            fab: document.getElementById('fab-add'),
-            btnClose: document.getElementById('btn-close'),
-            btnVoice: document.getElementById('btn-voice'),
-            csvUpload: document.getElementById('csv-upload'),
-            csvDownload: document.getElementById('csv-download'),
-            toast: document.getElementById('toast'),
-            toastMsg: document.getElementById('toast-msg'),
-            statTotal: document.getElementById('stat-total'),
-            statWinrate: document.getElementById('stat-winrate'),
-            fDateIn: document.getElementById('f-date-in'),
-            fDateOut: document.getElementById('f-date-out'),
-            installBanner: document.getElementById('install-banner')
-        };
+            const processed = sorted.map(t => {
+                const entry = parseFloat(t.entry), tp = parseFloat(t.tp), sl = parseFloat(t.sl);
+                const exit = t.result === 'TP' ? tp : sl;
+                const isBuy = t.type === 'Buy';
+                
+                // Pips for XAUUSD (10 pips = 1.0 movement)
+                const pips = isBuy ? (exit - entry) * 10 : (entry - exit) * 10;
+                const profit = pips * (lotSize / 0.01) * 0.10;
+                
+                const risk = isBuy ? (entry - sl) : (sl - entry);
+                const reward = isBuy ? (tp - entry) : (entry - tp);
+                const rr = risk !== 0 ? Math.abs(reward / risk) : 0;
+                
+                const dur = new Date(t.closeDate) - new Date(t.openDate);
 
-        // --- PWA LOGIC ---
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            el.installBanner.style.display = 'block';
-        });
+                totalProfit += profit;
+                totalPips += pips;
+                totalRR += rr;
+                totalDur += dur;
+                if (profit > 0) wins++;
 
-        el.installBanner.onclick = async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') el.installBanner.style.display = 'none';
-                deferredPrompt = null;
-            }
-        };
+                months.add(t.openDate.substring(0, 7));
+                years.add(t.openDate.substring(0, 4));
 
-        // Service Worker
-        if ('serviceWorker' in navigator) {
-            const swCode = `
-                const CACHE = 'bt-v3';
-                self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html', './manifest.json']))));
-                self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
-                self.addEventListener('activate', e => e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))));
-            `;
-            const blob = new Blob([swCode], {type: 'application/javascript'});
-            navigator.serviceWorker.register(URL.createObjectURL(blob));
+                // Consecutive Logic
+                if (pips > 0) {
+                    curCP += pips; curCC++; curCL = 0; curCLC = 0;
+                    if (curCP > maxCPips) maxCPips = curCP;
+                    if (curCC > maxCCount) maxCCount = curCC;
+                } else {
+                    curCL += Math.abs(pips); curCLC++; curCP = 0; curCC = 0;
+                    if (curCL > maxCLPips) maxCLPips = curCL;
+                    if (curCLC > maxCLCount) maxCLCount = curCLC;
+                }
+
+                return { ...t, profit, pips, rr, dur };
+            });
+
+            return {
+                processed, totalProfit, totalPips, 
+                count: trades.length,
+                probability: (wins / trades.length) * 100,
+                avgRR: totalRR / trades.length,
+                avgHold: totalDur / trades.length,
+                avgPips: totalPips / trades.length,
+                avgProfit: totalProfit / trades.length,
+                avgMonth: totalProfit / (months.size || 1),
+                maxCPips, maxCLPips, maxCCount, maxCLCount
+            };
         }
 
-        // --- APP LOGIC ---
-        const today = new Date().toISOString().split('T')[0];
-        el.fDateIn.value = today;
-        el.fDateOut.value = today;
+        // --- UI RENDERING ---
+        function render() {
+            const stats = calculateStats();
+            const summaryArea = document.getElementById('summaryArea');
+            const historyList = document.getElementById('historyList');
 
-        const showToast = (msg) => {
-            el.toastMsg.innerText = msg;
-            el.toast.classList.remove('hidden');
-            setTimeout(() => el.toast.classList.add('hidden'), 3000);
-        };
-
-        const formatDateToCSV = (dateStr) => {
-            if (!dateStr) return "";
-            const d = new Date(dateStr);
-            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            return `${String(d.getDate()).padStart(2, '0')}-${months[d.getMonth()]}-${d.getFullYear()}`;
-        };
-
-        const updateStats = () => {
-            el.statTotal.innerText = trades.length;
-            const wins = trades.filter(t => t.Keterangan === 'TP').length;
-            const wr = trades.length ? Math.round((wins / trades.length) * 100) : 0;
-            el.statWinrate.innerText = wr + '%';
-        };
-
-        const renderTrades = () => {
-            el.list.innerHTML = trades.length === 0 ? `<div class="text-center py-20 opacity-20"><p>Belum ada data jurnal</p></div>` : "";
-            trades.forEach((t, idx) => {
-                const div = document.createElement('div');
-                div.className = "glass p-4 rounded-2xl flex items-center justify-between animate-slide-up";
-                div.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-1.5 h-10 rounded-full ${t.Action === 'Buy' ? 'bg-[#36E2A0]' : 'bg-[#FF5F6D]'}"></div>
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <span class="font-bold text-sm">${t.Pair}</span>
-                                <span class="text-[9px] font-black px-1.5 py-0.5 rounded ${t.Action === 'Buy' ? 'bg-[#36E2A0]/10 text-[#36E2A0]' : 'bg-[#FF5F6D]/10 text-[#FF5F6D]'}">${t.Action.toUpperCase()}</span>
-                            </div>
-                            <p class="text-[10px] text-gray-500 mt-0.5">${t['Tanggal Entry']}</p>
-                        </div>
-                    </div>
-                    <div class="text-right flex items-center gap-4">
-                        <div>
-                            <p class="text-xs font-black ${t.Keterangan === 'TP' ? 'text-[#36E2A0]' : 'text-[#FF5F6D]'}">${t.Keterangan}</p>
-                            <p class="text-[10px] font-mono text-gray-400">${t.Entry}</p>
-                        </div>
-                        <button onclick="removeTrade(${idx})" class="p-2 text-gray-600 active:text-red-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            if (!stats) {
+                summaryArea.innerHTML = `
+                    <div class="h-40 flex flex-col items-center justify-center glass-card rounded-[2rem] text-slate-500 border-2 border-dashed border-white/5">
+                        <i data-lucide="file-spreadsheet" class="w-8 h-8 mb-2 opacity-20"></i>
+                        <p class="text-xs font-medium tracking-tight">Belum ada data backtest</p>
                     </div>
                 `;
-                el.list.appendChild(div);
-            });
+                historyList.innerHTML = '';
+            } else {
+                // Summary Panel
+                summaryArea.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[2.2rem] p-7 shadow-2xl shadow-indigo-500/10">
+                            <span class="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Total Net Profit</span>
+                            <div class="flex items-baseline gap-2 mt-1.5">
+                                <h2 class="text-3xl font-black text-white">$${stats.totalProfit.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</h2>
+                                <span class="text-indigo-200 text-xs font-bold">${stats.totalPips.toFixed(1)} Pips</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 mt-6 pt-5 border-t border-white/10">
+                                <div><p class="text-[9px] text-indigo-300 font-bold uppercase mb-0.5">Probability</p><p class="text-sm font-black text-white">${stats.probability.toFixed(1)}%</p></div>
+                                <div class="text-center"><p class="text-[9px] text-indigo-300 font-bold uppercase mb-0.5">Avg RR</p><p class="text-sm font-black text-white">1:${stats.avgRR.toFixed(2)}</p></div>
+                                <div class="text-right"><p class="text-[9px] text-indigo-300 font-bold uppercase mb-0.5">Trades</p><p class="text-sm font-black text-white">${stats.count}</p></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="glass-card p-4 rounded-2xl">
+                                <p class="text-[9px] font-bold text-slate-500 uppercase mb-3">Averages</p>
+                                <div class="space-y-3">
+                                    <div><p class="text-[10px] text-slate-400">Profit / Trade</p><p class="text-sm font-extrabold">$${stats.avgProfit.toFixed(2)}</p></div>
+                                    <div><p class="text-[10px] text-slate-400">Profit / Month</p><p class="text-sm font-extrabold">$${stats.avgMonth.toFixed(2)}</p></div>
+                                    <div><p class="text-[10px] text-slate-400">Average Pips</p><p class="text-sm font-extrabold">${stats.avgPips.toFixed(1)}</p></div>
+                                </div>
+                            </div>
+                            <div class="glass-card p-4 rounded-2xl">
+                                <p class="text-[9px] font-bold text-slate-500 uppercase mb-3">Consecutive</p>
+                                <div class="space-y-3">
+                                    <div><p class="text-[10px] text-emerald-500/70">Max Cons. Profit</p><p class="text-sm font-extrabold text-emerald-400">+${stats.maxCPips.toFixed(1)} <span class="text-[9px] opacity-60 font-medium">(${stats.maxCCount}x)</span></p></div>
+                                    <div><p class="text-[10px] text-rose-500/70">Max Cons. Loss</p><p class="text-sm font-extrabold text-rose-400">-${stats.maxCLPips.toFixed(1)} <span class="text-[9px] opacity-60 font-medium">(${stats.maxCLCount}x)</span></p></div>
+                                    <div><p class="text-[10px] text-slate-400">Avg Hold Time</p><p class="text-sm font-extrabold">${formatDuration(stats.avgHold)}</p></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // History List
+                historyList.innerHTML = stats.processed.slice().reverse().map(t => `
+                    <div class="glass-card p-4 rounded-2xl flex items-center justify-between hover:bg-white/[0.02] transition-colors group">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center ${t.profit >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}">
+                                <i data-lucide="${t.profit >= 0 ? 'trending-up' : 'trending-down'}" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-xs font-bold text-white uppercase">${t.pair}</span>
+                                    <span class="text-[8px] px-1.5 py-0.5 rounded-md font-black ${t.type === 'Buy' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-amber-500/20 text-amber-400'}">${t.type.toUpperCase()}</span>
+                                </div>
+                                <p class="text-[10px] text-slate-500 font-semibold mt-0.5">${new Date(t.openDate).toLocaleDateString('id-ID', {day:'2-digit', month:'short'})} • ${formatDuration(t.dur)}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="text-right">
+                                <p class="text-xs font-black ${t.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${t.profit >= 0 ? '+' : ''}$${Math.abs(t.profit).toFixed(2)}</p>
+                                <p class="text-[10px] text-slate-500 font-bold">${t.pips.toFixed(1)} pips</p>
+                            </div>
+                            <div class="flex gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                                <button onclick="editTrade(${t.id})" class="p-1.5 text-slate-400 hover:text-white"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                                <button onclick="deleteTrade(${t.id})" class="p-1.5 text-slate-400 hover:text-rose-500"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
             lucide.createIcons();
-            updateStats();
-        };
+        }
 
-        window.removeTrade = (idx) => {
-            trades.splice(idx, 1);
-            renderTrades();
-            showToast("Data dihapus");
-        };
+        // --- UTILS ---
+        function formatDuration(ms) {
+            if (isNaN(ms) || ms < 0) return "0h";
+            const hours = Math.floor(ms / (1000 * 60 * 60));
+            const days = Math.floor(hours / 24);
+            return days > 0 ? `${days}d ${hours % 24}h` : `${hours}h`;
+        }
 
-        // Toggles
-        document.querySelectorAll('.toggle-action').forEach(btn => {
-            btn.onclick = () => {
-                currentAction = btn.dataset.val;
-                document.querySelectorAll('.toggle-action').forEach(b => {
-                    b.classList.remove('bg-[#36E2A0]', 'bg-[#FF5F6D]', 'text-black', 'text-white');
-                    b.classList.add('text-gray-500');
-                });
-                btn.classList.remove('text-gray-500');
-                if(currentAction === 'Buy') btn.classList.add('bg-[#36E2A0]', 'text-black');
-                else btn.classList.add('bg-[#FF5F6D]', 'text-white');
-            };
-        });
+        function updateBalance(val) { initialBalance = Number(val); render(); }
+        function updateLot(val) { lotSize = Number(val); render(); }
 
-        document.querySelectorAll('.toggle-reason').forEach(btn => {
-            btn.onclick = () => {
-                currentReason = btn.dataset.val;
-                document.querySelectorAll('.toggle-reason').forEach(b => {
-                    b.classList.remove('bg-white/10', 'text-white');
-                    b.classList.add('text-gray-600');
-                });
-                btn.classList.add('bg-white/10', 'text-white');
-                btn.classList.remove('text-gray-600');
-            };
-        });
+        // --- MODAL & FORM ---
+        function openModal() {
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('editId').value = '';
+            document.getElementById('modalTitle').innerText = 'TAMBAH DATA BARU';
+            document.getElementById('tradeForm').reset();
+            setType('Buy');
+            setResult('TP');
+        }
 
-        el.form.onsubmit = (e) => {
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+
+        function setType(type) {
+            currentType = type;
+            document.getElementById('typeBuy').className = type === 'Buy' ? 'flex-1 py-1.5 rounded-md text-[10px] font-black bg-white text-black' : 'flex-1 py-1.5 rounded-md text-[10px] font-black text-slate-500';
+            document.getElementById('typeSell').className = type === 'Sell' ? 'flex-1 py-1.5 rounded-md text-[10px] font-black bg-white text-black' : 'flex-1 py-1.5 rounded-md text-[10px] font-black text-slate-500';
+        }
+
+        function setResult(res) {
+            currentResult = res;
+            document.getElementById('resultTP').className = res === 'TP' ? 'py-3 rounded-2xl border-2 border-emerald-500 bg-emerald-500/20 text-emerald-400 text-xs font-black' : 'py-3 rounded-2xl border-2 border-transparent bg-white/5 text-slate-500 text-xs font-black';
+            document.getElementById('resultSL').className = res === 'SL' ? 'py-3 rounded-2xl border-2 border-rose-500 bg-rose-500/20 text-rose-400 text-xs font-black' : 'py-3 rounded-2xl border-2 border-transparent bg-white/5 text-slate-500 text-xs font-black';
+        }
+
+        document.getElementById('tradeForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            const newTrade = {
-                Pair: document.getElementById('f-pair').value || "XAUUSD",
-                Action: currentAction,
-                'Tanggal Entry': formatDateToCSV(el.fDateIn.value),
-                'Tanggal Exit': formatDateToCSV(el.fDateOut.value),
-                Entry: document.getElementById('f-entry').value || "0",
-                TP: document.getElementById('f-tp').value || "0",
-                SL: document.getElementById('f-sl').value || "0",
-                Keterangan: currentReason
+            const id = document.getElementById('editId').value;
+            const entry = {
+                id: id ? Number(id) : Date.now(),
+                pair: 'XAUUSD',
+                type: currentType,
+                openDate: document.getElementById('openDate').value,
+                closeDate: document.getElementById('closeDate').value,
+                entry: document.getElementById('entryPrice').value,
+                tp: document.getElementById('tpPrice').value,
+                sl: document.getElementById('slPrice').value,
+                result: currentResult
             };
-            trades.unshift(newTrade);
-            renderTrades();
-            el.overlay.classList.add('hidden');
-            showToast("Berhasil disimpan");
-        };
 
-        // Voice
-        el.btnVoice.onclick = () => {
-            const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if(!Rec) return showToast("Mic tidak didukung");
-            const rec = new Rec();
-            rec.lang = 'id-ID';
-            rec.onstart = () => el.btnVoice.classList.add('bg-red-500', 'animate-pulse');
-            rec.onend = () => el.btnVoice.classList.remove('bg-red-500', 'animate-pulse');
-            rec.onresult = (e) => {
-                const text = e.results[0][0].transcript.toLowerCase();
-                if(text.includes("buy")) document.querySelector('.toggle-action[data-val="Buy"]').click();
-                if(text.includes("sell")) document.querySelector('.toggle-action[data-val="Sell"]').click();
-                if(text.includes("tp")) document.querySelector('.toggle-reason[data-val="TP"]').click();
-                if(text.includes("sl")) document.querySelector('.toggle-reason[data-val="SL"]').click();
-                const nums = text.match(/\d+(\.\d+)?/g);
-                if(nums){
-                    if(nums[0]) document.getElementById('f-entry').value = nums[0];
-                    if(nums[1]) document.getElementById('f-sl').value = nums[1];
-                    if(nums[2]) document.getElementById('f-tp').value = nums[2];
-                }
-                showToast("Suara diproses");
-            };
-            rec.start();
-        };
+            if (id) {
+                trades = trades.map(t => t.id === Number(id) ? entry : t);
+            } else {
+                trades.push(entry);
+            }
 
-        // CSV
-        el.csvUpload.onchange = (e) => {
-            const file = e.target.files[0];
+            closeModal();
+            render();
+        });
+
+        function editTrade(id) {
+            const t = trades.find(x => x.id === id);
+            if (!t) return;
+            openModal();
+            document.getElementById('editId').value = t.id;
+            document.getElementById('modalTitle').innerText = 'EDIT DATA TRADE';
+            document.getElementById('openDate').value = t.openDate;
+            document.getElementById('closeDate').value = t.closeDate;
+            document.getElementById('entryPrice').value = t.entry;
+            document.getElementById('tpPrice').value = t.tp;
+            document.getElementById('slPrice').value = t.sl;
+            setType(t.type);
+            setResult(t.result);
+        }
+
+        function deleteTrade(id) {
+            if (confirm('Hapus trade ini?')) {
+                trades = trades.filter(t => t.id !== id);
+                render();
+            }
+        }
+
+        // --- CSV OPERATIONS ---
+        function triggerImport() { document.getElementById('csvFile').click(); }
+
+        function importCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
             const reader = new FileReader();
-            reader.onload = (evt) => {
-                const rows = evt.target.result.split(/\r?\n/).filter(r => r.trim());
-                if(rows.length < 2) return;
-                const h = rows[0].split(';');
-                trades = rows.slice(1).map(row => {
-                    const v = row.split(';');
-                    let obj = {};
-                    h.forEach((name, i) => obj[name.trim()] = v[i]?.trim() || "");
-                    return obj;
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const rows = text.split(/\r?\n/);
+                const header = rows[0].split(';');
+                
+                const newTrades = rows.slice(1).filter(r => r.trim()).map((row, idx) => {
+                    const cols = row.split(';');
+                    return {
+                        id: Date.now() + idx,
+                        pair: cols[0] || 'XAUUSD',
+                        type: cols[1] || 'Buy',
+                        openDate: parseCSVDate(cols[2]),
+                        closeDate: parseCSVDate(cols[3]),
+                        entry: cols[4] || '',
+                        tp: cols[5] || '',
+                        sl: cols[6] || '',
+                        result: (cols[7] || 'TP').trim()
+                    };
                 });
-                renderTrades();
-                showToast("Impor berhasil");
+                
+                trades = [...trades, ...newTrades];
+                render();
+                event.target.value = '';
             };
             reader.readAsText(file);
-        };
+        }
 
-        el.csvDownload.onclick = () => {
-            const h = "Pair;Action;Tanggal Entry;Tanggal Exit;Entry;TP;SL;Keterangan";
-            const b = trades.map(t => `${t.Pair};${t.Action};${t['Tanggal Entry']};${t['Tanggal Exit']};${t.Entry};${t.TP};${t.SL};${t.Keterangan}`).join('\n');
-            const blob = new Blob([h + '\n' + b], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
+        function parseCSVDate(str) {
+            if (!str) return '';
+            // Handle DD-MMM-YYYY format (e.g., 14-Jan-2019)
+            const parts = str.split('-');
+            if (parts.length === 3) {
+                const monthMap = { 'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12' };
+                const day = parts[0].padStart(2, '0');
+                const month = monthMap[parts[1]] || '01';
+                const year = parts[2];
+                return `${year}-${month}-${day}`;
+            }
+            return str; // Fallback to raw
+        }
+
+        function exportCSV() {
+            if (trades.length === 0) return;
+            const header = "Pair;Action;Tanggal Entry;Tanggal Exit;Entry;TP;SL;Keterangan\n";
+            const content = trades.map(t => {
+                const formatDate = (d) => {
+                    const dt = new Date(d);
+                    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    return `${String(dt.getDate()).padStart(2,'0')}-${months[dt.getMonth()]}-${dt.getFullYear()}`;
+                };
+                return `${t.pair};${t.type};${formatDate(t.openDate)};${formatDate(t.closeDate)};${t.entry};${t.tp};${t.sl};${t.result}`;
+            }).join('\n');
+
+            const blob = new Blob([header + content], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = `backtest_${new Date().toISOString().split('T')[0]}.csv`;
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'backtest_tools_export.csv');
+            document.body.appendChild(a);
             a.click();
-        };
+            document.body.removeChild(a);
+        }
 
-        el.fab.onclick = () => el.overlay.classList.remove('hidden');
-        el.btnClose.onclick = () => el.overlay.classList.add('hidden');
+        // Initial render
+        render();
 
-        renderTrades();
     </script>
 </body>
 </html>

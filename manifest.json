@@ -1,7 +1,7 @@
 {
-  "name": "Backtest Pro Voice",
+  "name": "Backtest",
   "short_name": "BACKTEST",
-  "description": "Jurnal Backtest Trading dengan Fitur Suara",
+  "description": "Backtest Tools",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0E0E12",
