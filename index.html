@@ -1,150 +1,354 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Plus, 
-  TrendingUp, 
-  Upload, 
-  Download, 
-  Trash2, 
-  X, 
-  Mic,
-  History,
-  FileSpreadsheet,
-  AlertCircle,
-  Calendar,
-  CheckCircle2
-} from 'lucide-react';
-
-const THEME = {
-  background: "#0E0E12",
-  surface: "#17171F",
-  primary: "#6F7CFF",
-  success: "#36E2A0",
-  danger: "#FF5F6D",
-  textPrimary: "#FFFFFF",
-  textSecondary: "#9CA3AF"
-};
-
-const CSV_HEADER = "Pair;Action;Tanggal Entry;Tanggal Exit;Entry;TP;SL;Keterangan";
-
-export default function App() {
-  const [trades, setTrades] = useState([]);
-  const [screen, setScreen] = useState('home'); 
-  const [showToast, setShowToast] = useState(null);
-  const [isListening, setIsListening] = useState(false);
-  
-  // Form State
-  const initialForm = {
-    Pair: 'XAUUSD',
-    Action: 'Buy',
-    'Tanggal Entry': new Date().toISOString().split('T')[0],
-    'Tanggal Exit': new Date().toISOString().split('T')[0],
-    Entry: '',
-    TP: '',
-    SL: '',
-    Keterangan: 'TP'
-  };
-  const [form, setForm] = useState(initialForm);
-
-  // --- Helper Functions ---
-
-  const formatDateToCSV = (dateStr) => {
-    if (!dateStr) return "";
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const d = new Date(dateStr);
-    return `${String(d.getDate()).padStart(2, '0')}-${months[d.getMonth()]}-${d.getFullYear()}`;
-  };
-
-  const toast = (msg) => {
-    setShowToast(msg);
-    setTimeout(() => setShowToast(null), 3000);
-  };
-
-  // --- Voice Logic ---
-  const handleVoiceInput = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      toast("Browser tidak mendukung input suara");
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'id-ID';
-    recognition.interimResults = false;
-
-    recognition.onstart = () => setIsListening(true);
-    recognition.onend = () => setIsListening(false);
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Backtest Pro PWA</title>
     
-    recognition.onresult = (event) => {
-      const speechToText = event.results[0][0].transcript.toLowerCase();
-      console.log("Transcript:", speechToText);
-      
-      const newForm = { ...form };
-      
-      // Logika Keyword
-      if (speechToText.includes("buy")) newForm.Action = "Buy";
-      if (speechToText.includes("sell")) newForm.Action = "Sell";
-      if (speechToText.includes("tp") || speechToText.includes("take profit")) newForm.Keterangan = "TP";
-      if (speechToText.includes("sl") || speechToText.includes("stop loss")) newForm.Keterangan = "SL";
-      
-      // Regex untuk angka
-      const numbers = speechToText.match(/\d+(\.\d+)?/g);
-      if (numbers) {
-        if (numbers[0]) newForm.Entry = numbers[0];
-        if (numbers[1]) newForm.SL = numbers[1];
-        if (numbers[2]) newForm.TP = numbers[2];
-      }
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0E0E12">
+    
+    <!-- Manifest Inline -->
+    <link rel="manifest" href='data:application/json;base64,ewogICJuYW1lIjogIkJhY2t0ZXN0IFBybyIsCiAgInNob3J0X25hbWUiOiAiQlQgUHJvIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaWNvbi0xOTJ4MTkyLnBuZyIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwKICAgICAgInR5cGUiOiAiaW1hZ2UvcG5nIgogICAgfSwKICAgIHsKICAgICAgInNyYyI6ICJpY29uLTUxMng1MTIucG5nIiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciCiAgICB9CiAgXSwKICAic3RhcnRfdXJsIjogIi4vaW5kZXguaHRtbCIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzBFMEUxMiIsCiAgInRoZW1lX2NvbG9yIjogIiM2RjdDRkYiCn0='>
 
-      setForm(newForm);
-      toast("Suara diproses: " + speechToText);
-    };
+    <!-- Tailwind CSS & Lucide Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        body { background-color: #0E0E12; color: white; -webkit-tap-highlight-color: transparent; }
+        .glass { background: rgba(23, 23, 31, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+        .input-dark { background-color: #17171F; border: 1px solid rgba(255,255,255,0.05); outline: none; transition: border-color 0.2s; }
+        .input-dark:focus { border-color: #6F7CFF; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.3s ease-out; }
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.5; }
+    </style>
+</head>
+<body class="font-sans antialiased">
 
-    recognition.start();
-  };
+    <div id="app" class="pb-32">
+        <!-- Header -->
+        <header class="px-5 pt-8 pb-4 sticky top-0 bg-[#0E0E12]/90 backdrop-blur-md z-40 flex items-center justify-between">
+            <h1 class="text-lg font-black tracking-tighter italic">BT<span class="text-[#6F7CFF]">.VOICE</span></h1>
+            <div class="flex gap-2">
+                <label class="p-2.5 rounded-xl glass active:bg-white/10 cursor-pointer">
+                    <input type="file" id="csv-upload" accept=".csv" class="hidden">
+                    <i data-lucide="upload" class="w-5 h-5"></i>
+                </label>
+                <button id="csv-download" class="p-2.5 rounded-xl glass active:bg-white/10">
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </header>
 
-  // --- File Logic ---
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const text = event.target.result;
-        const rows = text.split(/\r?\n/).filter(row => row.trim());
-        const headers = rows[0].split(';');
-        const parsed = rows.slice(1).map(row => {
-          const values = row.split(';');
-          const obj = {};
-          headers.forEach((h, i) => obj[h.trim()] = values[i]?.trim() || "");
-          return obj;
+        <!-- Stats -->
+        <div class="px-5 flex gap-3 mb-6">
+            <div class="flex-1 glass p-4 rounded-3xl">
+                <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Total Trades</p>
+                <p id="stat-total" class="text-2xl font-black">0</p>
+            </div>
+            <div class="flex-1 glass p-4 rounded-3xl">
+                <p class="text-[10px] text-gray-500 font-bold uppercase mb-1">Win Rate</p>
+                <p id="stat-winrate" class="text-2xl font-black text-[#36E2A0]">0%</p>
+            </div>
+        </div>
+
+        <!-- List -->
+        <div id="trade-list" class="px-5 space-y-3">
+            <!-- Data trades akan muncul di sini -->
+        </div>
+
+        <!-- Floating Action Button -->
+        <button id="fab-add" class="fixed bottom-8 right-6 w-16 h-16 bg-[#6F7CFF] rounded-full flex items-center justify-center shadow-2xl shadow-[#6F7CFF]/40 active:scale-90 transition-transform z-30">
+            <i data-lucide="plus" class="w-8 h-8 text-white stroke-[3]"></i>
+        </button>
+
+        <!-- Overlay Add Form -->
+        <div id="overlay" class="fixed inset-0 z-50 bg-[#0E0E12] hidden overflow-y-auto px-5 py-8">
+            <div class="flex items-center justify-between mb-8">
+                <button id="btn-close" class="p-2 -ml-2 text-gray-400"><i data-lucide="x"></i></button>
+                <h2 class="text-xs font-black uppercase tracking-widest">Entry Data</h2>
+                <button id="btn-voice" class="p-3 rounded-full bg-[#6F7CFF] shadow-lg shadow-[#6F7CFF]/30">
+                    <i data-lucide="mic" class="w-5 h-5 text-white"></i>
+                </button>
+            </div>
+
+            <form id="trade-form" class="space-y-5">
+                <!-- Action Toggle -->
+                <div class="grid grid-cols-2 glass p-1.5 rounded-2xl">
+                    <button type="button" data-val="Buy" class="toggle-action py-3 rounded-xl text-xs font-black transition-all bg-[#36E2A0] text-black">BUY</button>
+                    <button type="button" data-val="Sell" class="toggle-action py-3 rounded-xl text-xs font-black transition-all text-gray-500">SELL</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Pair</label>
+                        <input id="f-pair" type="text" value="XAUUSD" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Keterangan Close</label>
+                        <div class="flex glass p-1 rounded-xl">
+                            <button type="button" data-val="TP" class="toggle-reason flex-1 py-2 rounded-lg text-[10px] font-black transition-all bg-white/10 text-white">TP</button>
+                            <button type="button" data-val="SL" class="toggle-reason flex-1 py-2 rounded-lg text-[10px] font-black transition-all text-gray-600">SL</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Entry Price</label>
+                    <input id="f-entry" type="number" step="any" inputmode="decimal" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm" placeholder="0.00">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1 text-[#36E2A0]">TP Price</label>
+                        <input id="f-tp" type="number" step="any" inputmode="decimal" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-[#36E2A0]" placeholder="0.00">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1 text-[#FF5F6D]">SL Price</label>
+                        <input id="f-sl" type="number" step="any" inputmode="decimal" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-[#FF5F6D]" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Tgl Entry</label>
+                        <input id="f-date-in" type="date" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-white">
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase ml-1">Tgl Exit</label>
+                        <input id="f-date-out" type="date" class="w-full input-dark rounded-xl px-4 py-3.5 text-sm text-white">
+                    </div>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" class="w-full bg-[#6F7CFF] py-4 rounded-2xl font-black text-sm shadow-xl active:scale-95 transition-transform">
+                        SIMPAN JURNAL
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast" class="fixed bottom-28 left-5 right-5 z-[100] glass rounded-2xl p-4 hidden flex items-center gap-3">
+            <i data-lucide="info" class="w-5 h-5 text-[#6F7CFF]"></i>
+            <span id="toast-msg" class="text-xs font-bold">Pesan</span>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        let trades = [];
+        let currentAction = 'Buy';
+        let currentReason = 'TP';
+
+        const el = {
+            list: document.getElementById('trade-list'),
+            form: document.getElementById('trade-form'),
+            overlay: document.getElementById('overlay'),
+            fab: document.getElementById('fab-add'),
+            btnClose: document.getElementById('btn-close'),
+            btnVoice: document.getElementById('btn-voice'),
+            csvUpload: document.getElementById('csv-upload'),
+            csvDownload: document.getElementById('csv-download'),
+            toast: document.getElementById('toast'),
+            toastMsg: document.getElementById('toast-msg'),
+            statTotal: document.getElementById('stat-total'),
+            statWinrate: document.getElementById('stat-winrate'),
+            fDateIn: document.getElementById('f-date-in'),
+            fDateOut: document.getElementById('f-date-out')
+        };
+
+        // Initialize Dates
+        const today = new Date().toISOString().split('T')[0];
+        el.fDateIn.value = today;
+        el.fDateOut.value = today;
+
+        // UI Helpers
+        const showToast = (msg) => {
+            el.toastMsg.innerText = msg;
+            el.toast.classList.remove('hidden');
+            setTimeout(() => el.toast.classList.add('hidden'), 3000);
+        };
+
+        const formatDateToCSV = (dateStr) => {
+            if (!dateStr) return "";
+            const d = new Date(dateStr);
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            return `${String(d.getDate()).padStart(2, '0')}-${months[d.getMonth()]}-${d.getFullYear()}`;
+        };
+
+        const updateStats = () => {
+            el.statTotal.innerText = trades.length;
+            const wins = trades.filter(t => t.Keterangan === 'TP').length;
+            const wr = trades.length ? Math.round((wins / trades.length) * 100) : 0;
+            el.statWinrate.innerText = wr + '%';
+        };
+
+        const renderTrades = () => {
+            el.list.innerHTML = trades.length === 0 ? `<div class="text-center py-20 opacity-20"><p>Data Kosong</p></div>` : "";
+            trades.forEach((t, idx) => {
+                const div = document.createElement('div');
+                div.className = "glass p-4 rounded-2xl flex items-center justify-between";
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-1 h-10 rounded-full ${t.Action === 'Buy' ? 'bg-[#36E2A0]' : 'bg-[#FF5F6D]'}"></div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-sm">${t.Pair}</span>
+                                <span class="text-[9px] font-black px-1.5 py-0.5 rounded ${t.Action === 'Buy' ? 'bg-[#36E2A0]/10 text-[#36E2A0]' : 'bg-[#FF5F6D]/10 text-[#FF5F6D]'}">${t.Action.toUpperCase()}</span>
+                            </div>
+                            <p class="text-[10px] text-gray-500 mt-0.5">${t['Tanggal Entry']}</p>
+                        </div>
+                    </div>
+                    <div class="text-right flex items-center gap-4">
+                        <div>
+                            <p class="text-xs font-black ${t.Keterangan === 'TP' ? 'text-[#36E2A0]' : 'text-[#FF5F6D]'}">${t.Keterangan}</p>
+                            <p class="text-[10px] font-mono text-gray-500">${t.Entry}</p>
+                        </div>
+                        <button onclick="removeTrade(${idx})" class="text-gray-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                `;
+                el.list.appendChild(div);
+            });
+            lucide.createIcons();
+            updateStats();
+        };
+
+        window.removeTrade = (idx) => {
+            trades.splice(idx, 1);
+            renderTrades();
+            showToast("Data dihapus");
+        };
+
+        // Form Logic
+        document.querySelectorAll('.toggle-action').forEach(btn => {
+            btn.onclick = () => {
+                currentAction = btn.dataset.val;
+                document.querySelectorAll('.toggle-action').forEach(b => {
+                    b.classList.remove('bg-[#36E2A0]', 'bg-[#FF5F6D]', 'text-black', 'text-white');
+                    b.classList.add('text-gray-500');
+                });
+                btn.classList.remove('text-gray-500');
+                if(currentAction === 'Buy') btn.classList.add('bg-[#36E2A0]', 'text-black');
+                else btn.classList.add('bg-[#FF5F6D]', 'text-white');
+            };
         });
-        setTrades(parsed);
-        toast(`${parsed.length} data diimpor`);
-      } catch (err) {
-        toast("Gagal impor CSV");
-      }
-    };
-    reader.readAsText(file);
-  };
 
-  const exportToCSV = () => {
-    if (trades.length === 0) return toast("Tidak ada data");
-    const rows = trades.map(t => 
-      `${t.Pair};${t.Action};${t['Tanggal Entry']};${t['Tanggal Exit']};${t.Entry};${t.TP};${t.SL};${t.Keterangan}`
-    ).join('\n');
-    const blob = new Blob([`${CSV_HEADER}\n${rows}`], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `backtest_export.csv`;
-    link.click();
-  };
+        document.querySelectorAll('.toggle-reason').forEach(btn => {
+            btn.onclick = () => {
+                currentReason = btn.dataset.val;
+                document.querySelectorAll('.toggle-reason').forEach(b => {
+                    b.classList.remove('bg-white/10', 'text-white');
+                    b.classList.add('text-gray-600');
+                });
+                btn.classList.add('bg-white/10', 'text-white');
+                btn.classList.remove('text-gray-600');
+            };
+        });
 
-  const saveTrade = (e) => {
-    e.preventDefault();
-    const tradeToSave = {
-      ...form,
-      'Tanggal Entry': formatDateToCSV(form['Tanggal Entry']),
-      'Tanggal Exit': formatDateToCSV(form['Tanggal Exit'])
-    };
+        el.form.onsubmit = (e) => {
+            e.preventDefault();
+            const newTrade = {
+                Pair: document.getElementById('f-pair').value,
+                Action: currentAction,
+                'Tanggal Entry': formatDateToCSV(el.fDateIn.value),
+                'Tanggal Exit': formatDateToCSV(el.fDateOut.value),
+                Entry: document.getElementById('f-entry').value,
+                TP: document.getElementById('f-tp').value,
+                SL: document.getElementById('f-sl').value,
+                Keterangan: currentReason
+            };
+            trades.unshift(newTrade);
+            renderTrades();
+            el.overlay.classList.add('hidden');
+            showToast("Berhasil disimpan");
+        };
+
+        // Voice Logic
+        el.btnVoice.onclick = () => {
+            const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if(!Recognition) return showToast("Mic tidak didukung browser");
+            
+            const rec = new Recognition();
+            rec.lang = 'id-ID';
+            rec.onstart = () => {
+                el.btnVoice.classList.add('bg-red-500', 'animate-pulse');
+                showToast("Mendengarkan...");
+            };
+            rec.onend = () => el.btnVoice.classList.remove('bg-red-500', 'animate-pulse');
+            rec.onresult = (e) => {
+                const text = e.results[0][0].transcript.toLowerCase();
+                if(text.includes("buy")) document.querySelector('.toggle-action[data-val="Buy"]').click();
+                if(text.includes("sell")) document.querySelector('.toggle-action[data-val="Sell"]').click();
+                if(text.includes("tp") || text.includes("take profit")) document.querySelector('.toggle-reason[data-val="TP"]').click();
+                if(text.includes("sl") || text.includes("stop loss")) document.querySelector('.toggle-reason[data-val="SL"]').click();
+                
+                const nums = text.match(/\d+(\.\d+)?/g);
+                if(nums) {
+                    if(nums[0]) document.getElementById('f-entry').value = nums[0];
+                    if(nums[1]) document.getElementById('f-sl').value = nums[1];
+                    if(nums[2]) document.getElementById('f-tp').value = nums[2];
+                }
+                showToast("Data suara diproses");
+            };
+            rec.start();
+        };
+
+        // File Operations
+        el.csvUpload.onchange = (e) => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const rows = evt.target.result.split(/\r?\n/).filter(r => r.trim());
+                const headers = rows[0].split(';');
+                trades = rows.slice(1).map(row => {
+                    const vals = row.split(';');
+                    const obj = {};
+                    headers.forEach((h, i) => obj[h.trim()] = vals[i] || "");
+                    return obj;
+                });
+                renderTrades();
+                showToast("Impor berhasil");
+            };
+            reader.readAsText(file);
+        };
+
+        el.csvDownload.onclick = () => {
+            if(trades.length === 0) return showToast("Tidak ada data");
+            const header = "Pair;Action;Tanggal Entry;Tanggal Exit;Entry;TP;SL;Keterangan";
+            const body = trades.map(t => `${t.Pair};${t.Action};${t['Tanggal Entry']};${t['Tanggal Exit']};${t.Entry};${t.TP};${t.SL};${t.Keterangan}`).join('\n');
+            const blob = new Blob([header + '\n' + body], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = "backtest_jurnal.csv";
+            a.click();
+        };
+
+        // Navigation
+        el.fab.onclick = () => el.overlay.classList.remove('hidden');
+        el.btnClose.onclick = () => el.overlay.classList.add('hidden');
+
+        // Service Worker Registration for PWA
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                self.addEventListener('install', e => e.waitUntil(caches.open('bt-v1').then(c => c.addAll(['./index.html']))));
+                self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
+            `;
+            const blob = new Blob([swCode], {type: 'application/javascript'});
+            const url = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(url);
+        }
+
+        renderTrades();
+    </script>
+</body>
+</html>
+
     setTrades([tradeToSave, ...trades]);
     setForm(initialForm);
     setScreen('home');
