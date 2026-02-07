@@ -4,8 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Backtest Tools</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a0c">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         
@@ -30,16 +39,78 @@
         .glass-card {
             background: #141417;
             border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
         }
 
-        .modal-enter { animation: modalFadeIn 0.3s ease-out; }
+        .modal-enter { 
+            animation: modalFadeIn 0.3s ease-out; 
+        }
+        
         @keyframes modalFadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { 
+                opacity: 0; 
+                transform: translateY(20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+
+        /* PWA Installation Prompt */
+        #installPrompt {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { 
+                opacity: 0; 
+                transform: translate(-50%, 100%); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translate(-50%, 0); 
+            }
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 640px) {
+            .glass-card {
+                border-radius: 1.5rem !important;
+            }
+            input, button {
+                font-size: 16px !important; /* Prevents iOS zoom */
+            }
         }
     </style>
 </head>
 <body class="pb-10">
+
+    <!-- PWA Install Prompt (Hidden by default) -->
+    <div id="installPrompt" class="hidden glass-card p-4 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
+        <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
+                <i data-lucide="bar-chart-3" class="text-white w-6 h-6"></i>
+            </div>
+            <div>
+                <p class="text-sm font-bold text-white">Install Backtest Tools</p>
+                <p class="text-xs text-slate-400">Use offline with full functionality</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="dismissInstallPrompt()" class="flex-1 py-2 text-sm font-bold text-slate-400 hover:text-white transition-colors">
+                Later
+            </button>
+            <button onclick="installPWA()" class="flex-1 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors">
+                Install
+            </button>
+        </div>
+    </div>
 
     <!-- Header -->
     <nav class="sticky top-0 z-40 bg-[#0a0a0c]/80 backdrop-blur-lg border-b border-white/5 px-5 py-4">
@@ -56,6 +127,9 @@
                 </button>
                 <button onclick="triggerImport()" class="p-2.5 hover:bg-white/5 rounded-full transition-colors text-slate-400" title="Unggah CSV">
                     <i data-lucide="upload" class="w-5 h-5"></i>
+                </button>
+                <button onclick="clearAllData()" class="p-2.5 hover:bg-white/5 rounded-full transition-colors text-rose-400" title="Hapus Semua Data">
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
                 </button>
                 <input type="file" id="csvFile" class="hidden" accept=".csv" onchange="importCSV(event)">
             </div>
@@ -80,7 +154,7 @@
 
         <!-- Dynamic Summary Area -->
         <div id="summaryArea">
-            <div class="h-40 flex flex-col items-center justify-center glass-card rounded-[2rem] text-slate-500">
+            <div class="h-40 flex flex-col items-center justify-center glass-card rounded-[2rem] text-slate-500 border-2 border-dashed border-white/5">
                 <i data-lucide="file-spreadsheet" class="w-8 h-8 mb-2 opacity-20"></i>
                 <p class="text-xs font-medium tracking-tight">Belum ada data backtest</p>
             </div>
@@ -89,23 +163,44 @@
         <!-- Trade History Header -->
         <div class="flex justify-between items-center px-2 pt-2">
             <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Trade History</h3>
-            <button onclick="openModal()" class="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-full text-[10px] font-bold shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">
-                <i data-lucide="plus" class="w-3.5 h-3.5"></i> TAMBAH DATA
-            </button>
+            <div class="flex items-center gap-2">
+                <button onclick="showStatsModal()" class="p-2 hover:bg-white/5 rounded-full transition-colors text-slate-400" title="Statistik Detail">
+                    <i data-lucide="pie-chart" class="w-4 h-4"></i>
+                </button>
+                <button onclick="openModal()" class="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-full text-[10px] font-bold shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> TAMBAH DATA
+                </button>
+            </div>
         </div>
 
         <!-- History List -->
-        <div id="historyList" class="space-y-2.5"></div>
+        <div id="historyList" class="space-y-2.5 custom-scrollbar max-h-[400px] overflow-y-auto"></div>
+
+        <!-- Storage Info -->
+        <div class="glass-card p-3 rounded-xl mt-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="database" class="w-4 h-4 text-slate-500"></i>
+                    <span class="text-[10px] font-bold text-slate-500 uppercase">Penyimpanan Lokal</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span id="storageStatus" class="text-[10px] font-bold text-emerald-500">Data Tersimpan</span>
+                </div>
+            </div>
+        </div>
 
     </main>
 
-    <!-- Modal Form -->
+    <!-- Modal Form Tambah/Edit Trade -->
     <div id="modal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal()"></div>
         <div class="relative w-full max-w-md bg-[#141417] rounded-t-[2rem] sm:rounded-[2.5rem] border-t border-white/10 p-7 shadow-2xl modal-enter">
             <div class="flex justify-between items-center mb-6">
                 <h3 id="modalTitle" class="text-sm font-bold text-white uppercase tracking-tighter">Tambah Trade</h3>
-                <button onclick="closeModal()" class="text-slate-500 p-1 hover:text-white transition-colors"><i data-lucide="x" class="w-6 h-6"></i></button>
+                <button onclick="closeModal()" class="text-slate-500 p-1 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
             </div>
             <form id="tradeForm" class="space-y-4">
                 <input type="hidden" id="editId">
@@ -158,47 +253,127 @@
                     </div>
                 </div>
 
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-extrabold text-xs tracking-widest mt-4 shadow-xl shadow-indigo-500/20 transition-all">CONFIRM TRADE</button>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-extrabold text-xs tracking-widest mt-4 shadow-xl shadow-indigo-500/20 transition-all">
+                    CONFIRM TRADE
+                </button>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal Statistik Detail -->
+    <div id="statsModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeStatsModal()"></div>
+        <div class="relative w-full max-w-md bg-[#141417] rounded-[2.5rem] border border-white/10 p-7 shadow-2xl modal-enter">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-sm font-bold text-white uppercase tracking-tighter">Statistik Detail</h3>
+                <button onclick="closeStatsModal()" class="text-slate-500 p-1 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div id="statsContent" class="space-y-4">
+                <!-- Stats will be populated here -->
+            </div>
         </div>
     </div>
 
     <script>
         // --- STORAGE KEYS ---
-        const TRADES_KEY = 'bt_trades_data';
-        const CONFIG_KEY = 'bt_config_data';
+        const TRADES_KEY = 'bt_trades_data_v2';
+        const CONFIG_KEY = 'bt_config_data_v2';
+        const INSTALL_PROMPT_KEY = 'bt_install_prompt';
 
         let trades = [];
         let lotSize = 0.01;
         let initialBalance = 10000;
         let currentType = 'Buy';
         let currentResult = 'TP';
+        let deferredPrompt = null;
 
         // --- DATA PERSISTENCE ---
         function saveData() {
-            localStorage.setItem(TRADES_KEY, JSON.stringify(trades));
-            localStorage.setItem(CONFIG_KEY, JSON.stringify({
-                lotSize,
-                initialBalance
-            }));
+            try {
+                localStorage.setItem(TRADES_KEY, JSON.stringify(trades));
+                localStorage.setItem(CONFIG_KEY, JSON.stringify({
+                    lotSize,
+                    initialBalance,
+                    lastSaved: new Date().toISOString()
+                }));
+                
+                // Show save confirmation
+                const status = document.getElementById('storageStatus');
+                status.textContent = 'Data Tersimpan';
+                status.className = 'text-[10px] font-bold text-emerald-500';
+                
+                setTimeout(() => {
+                    status.textContent = 'Data Tersimpan';
+                    status.className = 'text-[10px] font-bold text-slate-500';
+                }, 2000);
+                
+                console.log('Data saved successfully');
+            } catch (e) {
+                console.error('Error saving data:', e);
+                alert('Error saving data. Storage might be full.');
+            }
         }
 
         function loadData() {
-            const savedTrades = localStorage.getItem(TRADES_KEY);
-            const savedConfig = localStorage.getItem(CONFIG_KEY);
+            try {
+                const savedTrades = localStorage.getItem(TRADES_KEY);
+                const savedConfig = localStorage.getItem(CONFIG_KEY);
 
-            if (savedTrades) {
-                trades = JSON.parse(savedTrades);
-            }
-            
-            if (savedConfig) {
-                const config = JSON.parse(savedConfig);
-                lotSize = config.lotSize || 0.01;
-                initialBalance = config.initialBalance || 10000;
+                if (savedTrades) {
+                    trades = JSON.parse(savedTrades);
+                    console.log(`Loaded ${trades.length} trades from storage`);
+                }
                 
-                // Update UI inputs
-                document.getElementById('balanceInput').value = initialBalance;
-                document.getElementById('lotInput').value = lotSize;
+                if (savedConfig) {
+                    const config = JSON.parse(savedConfig);
+                    lotSize = config.lotSize || 0.01;
+                    initialBalance = config.initialBalance || 10000;
+                    
+                    // Update UI inputs
+                    document.getElementById('balanceInput').value = initialBalance;
+                    document.getElementById('lotInput').value = lotSize;
+                }
+                
+                updateStorageInfo();
+            } catch (e) {
+                console.error('Error loading data:', e);
+                // Reset to default if corrupted
+                trades = [];
+                lotSize = 0.01;
+                initialBalance = 10000;
+            }
+        }
+
+        function updateStorageInfo() {
+            const totalTrades = trades.length;
+            const totalKB = (localStorage.length / 1024).toFixed(2);
+            const status = document.getElementById('storageStatus');
+            
+            if (totalTrades > 0) {
+                status.textContent = `${totalTrades} trades • ${totalKB} KB`;
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('Hapus SEMUA data trade? Tindakan ini tidak dapat dibatalkan.')) {
+                if (confirm('Serius? Semua data akan hilang permanen.')) {
+                    trades = [];
+                    lotSize = 0.01;
+                    initialBalance = 10000;
+                    
+                    localStorage.removeItem(TRADES_KEY);
+                    localStorage.removeItem(CONFIG_KEY);
+                    
+                    document.getElementById('balanceInput').value = initialBalance;
+                    document.getElementById('lotInput').value = lotSize;
+                    
+                    render();
+                    updateStorageInfo();
+                    
+                    alert('Semua data telah dihapus.');
+                }
             }
         }
 
@@ -215,6 +390,12 @@
             let maxCPips = 0, maxCLPips = 0, maxCCount = 0, maxCLCount = 0;
             let curCP = 0, curCL = 0, curCC = 0, curCLC = 0;
             const months = new Set();
+            let maxProfitTrade = { profit: -Infinity };
+            let maxLossTrade = { profit: Infinity };
+            let winStreak = 0, lossStreak = 0, currentStreak = 0;
+            let maxWinStreak = 0, maxLossStreak = 0;
+            const dailyProfits = {};
+            const monthlyProfits = {};
 
             const processed = sorted.map(t => {
                 const entry = parseFloat(t.entry), tp = parseFloat(t.tp), sl = parseFloat(t.sl);
@@ -233,9 +414,35 @@
                 totalPips += pips;
                 totalRR += rr;
                 totalDur += dur;
-                if (profit > 0) wins++;
+                
+                if (profit > 0) {
+                    wins++;
+                    currentStreak = currentStreak > 0 ? currentStreak + 1 : 1;
+                    lossStreak = Math.max(lossStreak, -currentStreak);
+                    maxWinStreak = Math.max(maxWinStreak, currentStreak);
+                } else {
+                    currentStreak = currentStreak < 0 ? currentStreak - 1 : -1;
+                    winStreak = Math.max(winStreak, -currentStreak);
+                    maxLossStreak = Math.max(maxLossStreak, -currentStreak);
+                }
 
                 months.add(t.openDate.substring(0, 7));
+
+                // Track max profit/loss trades
+                if (profit > maxProfitTrade.profit) {
+                    maxProfitTrade = { ...t, profit, pips };
+                }
+                if (profit < maxLossTrade.profit) {
+                    maxLossTrade = { ...t, profit, pips };
+                }
+
+                // Track daily profits
+                const dateKey = t.closeDate.split('T')[0];
+                dailyProfits[dateKey] = (dailyProfits[dateKey] || 0) + profit;
+                
+                // Track monthly profits
+                const monthKey = t.closeDate.substring(0, 7);
+                monthlyProfits[monthKey] = (monthlyProfits[monthKey] || 0) + profit;
 
                 if (pips > 0) {
                     curCP += pips; curCC++; curCL = 0; curCLC = 0;
@@ -250,16 +457,40 @@
                 return { ...t, profit, pips, rr, dur };
             });
 
+            const totalTrades = trades.length;
+            const loss = totalTrades - wins;
+            const netProfit = totalProfit;
+            const profitFactor = wins > 0 ? (totalProfit / Math.abs(loss * (totalProfit / totalTrades))) : 0;
+
+            // Calculate best/worst day/month
+            const bestDay = Object.entries(dailyProfits).reduce((a, b) => a[1] > b[1] ? a : b, ['', -Infinity]);
+            const worstDay = Object.entries(dailyProfits).reduce((a, b) => a[1] < b[1] ? a : b, ['', Infinity]);
+            const bestMonth = Object.entries(monthlyProfits).reduce((a, b) => a[1] > b[1] ? a : b, ['', -Infinity]);
+            const worstMonth = Object.entries(monthlyProfits).reduce((a, b) => a[1] < b[1] ? a : b, ['', Infinity]);
+
             return {
                 processed, totalProfit, totalPips, 
-                count: trades.length,
-                probability: (wins / trades.length) * 100,
-                avgRR: totalRR / trades.length,
-                avgHold: totalDur / trades.length,
-                avgPips: totalPips / trades.length,
-                avgProfit: totalProfit / trades.length,
+                count: totalTrades,
+                winCount: wins,
+                lossCount: loss,
+                probability: (wins / totalTrades) * 100,
+                avgRR: totalRR / totalTrades,
+                avgHold: totalDur / totalTrades,
+                avgPips: totalPips / totalTrades,
+                avgProfit: totalProfit / totalTrades,
                 avgMonth: totalProfit / (months.size || 1),
-                maxCPips, maxCLPips, maxCCount, maxCLCount
+                maxCPips, maxCLPips, maxCCount, maxCLCount,
+                maxProfitTrade,
+                maxLossTrade,
+                maxWinStreak,
+                maxLossStreak,
+                profitFactor,
+                bestDay: { date: bestDay[0], profit: bestDay[1] },
+                worstDay: { date: worstDay[0], profit: worstDay[1] },
+                bestMonth: { date: bestMonth[0], profit: bestMonth[1] },
+                worstMonth: { date: worstMonth[0], profit: worstMonth[1] },
+                netProfit,
+                recoveryFactor: maxCLPips > 0 ? netProfit / maxCLPips : 0
             };
         }
 
@@ -274,6 +505,7 @@
                     <div class="h-40 flex flex-col items-center justify-center glass-card rounded-[2rem] text-slate-500 border-2 border-dashed border-white/5">
                         <i data-lucide="file-spreadsheet" class="w-8 h-8 mb-2 opacity-20"></i>
                         <p class="text-xs font-medium tracking-tight">Belum ada data backtest</p>
+                        <p class="text-[10px] text-slate-600 mt-1">Tambahkan trade pertama Anda</p>
                     </div>
                 `;
                 historyList.innerHTML = '';
@@ -287,7 +519,7 @@
                                 <span class="text-indigo-200 text-xs font-bold">${stats.totalPips.toFixed(1)} Pips</span>
                             </div>
                             <div class="grid grid-cols-3 gap-2 mt-6 pt-5 border-t border-white/10">
-                                <div><p class="text-[9px] text-indigo-300 font-bold uppercase mb-0.5">Probability</p><p class="text-sm font-black text-white">${stats.probability.toFixed(1)}%</p></div>
+                                <div><p class="text-[9px] text-indigo-300 font-bold uppercase mb-0.5">Win Rate</p><p class="text-sm font-black text-white">${stats.probability.toFixed(1)}%</p></div>
                                 <div class="text-center"><p class="text-[9px] text-indigo-300 font-bold uppercase mb-0.5">Avg RR</p><p class="text-sm font-black text-white">1:${stats.avgRR.toFixed(2)}</p></div>
                                 <div class="text-right"><p class="text-[9px] text-indigo-300 font-bold uppercase mb-0.5">Trades</p><p class="text-sm font-black text-white">${stats.count}</p></div>
                             </div>
@@ -305,8 +537,8 @@
                             <div class="glass-card p-4 rounded-2xl">
                                 <p class="text-[9px] font-bold text-slate-500 uppercase mb-3">Consecutive</p>
                                 <div class="space-y-3">
-                                    <div><p class="text-[10px] text-emerald-500/70">Max Cons. Profit</p><p class="text-sm font-extrabold text-emerald-400">+${stats.maxCPips.toFixed(1)} <span class="text-[9px] opacity-60 font-medium">(${stats.maxCCount}x)</span></p></div>
-                                    <div><p class="text-[10px] text-rose-500/70">Max Cons. Loss</p><p class="text-sm font-extrabold text-rose-400">-${stats.maxCLPips.toFixed(1)} <span class="text-[9px] opacity-60 font-medium">(${stats.maxCLCount}x)</span></p></div>
+                                    <div><p class="text-[10px] text-emerald-500/70">Max Win Streak</p><p class="text-sm font-extrabold text-emerald-400">${stats.maxWinStreak} trades</p></div>
+                                    <div><p class="text-[10px] text-rose-500/70">Max Loss Streak</p><p class="text-sm font-extrabold text-rose-400">${stats.maxLossStreak} trades</p></div>
                                     <div><p class="text-[10px] text-slate-400">Avg Hold Time</p><p class="text-sm font-extrabold">${formatDuration(stats.avgHold)}</p></div>
                                 </div>
                             </div>
@@ -341,7 +573,96 @@
                     </div>
                 `).join('');
             }
+            
             lucide.createIcons();
+            updateStorageInfo();
+        }
+
+        function showStatsModal() {
+            const stats = calculateStats();
+            if (!stats) {
+                alert('Belum ada data untuk ditampilkan');
+                return;
+            }
+
+            const statsContent = document.getElementById('statsContent');
+            statsContent.innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="glass-card p-3 rounded-xl">
+                            <p class="text-[10px] text-slate-500 font-bold mb-1">Total Trades</p>
+                            <p class="text-lg font-black text-white">${stats.count}</p>
+                        </div>
+                        <div class="glass-card p-3 rounded-xl">
+                            <p class="text-[10px] text-slate-500 font-bold mb-1">Win Rate</p>
+                            <p class="text-lg font-black text-emerald-400">${stats.probability.toFixed(1)}%</p>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-4 rounded-xl">
+                        <p class="text-[10px] text-slate-500 font-bold mb-3">Profit & Loss</p>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-xs text-slate-400">Wins / Loss</span>
+                                <span class="text-xs font-bold text-white">${stats.winCount} / ${stats.lossCount}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-xs text-slate-400">Profit Factor</span>
+                                <span class="text-xs font-bold text-emerald-400">${stats.profitFactor.toFixed(2)}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-xs text-slate-400">Recovery Factor</span>
+                                <span class="text-xs font-bold ${stats.recoveryFactor >= 1 ? 'text-emerald-400' : 'text-rose-400'}">${stats.recoveryFactor.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-4 rounded-xl">
+                        <p class="text-[10px] text-slate-500 font-bold mb-3">Best & Worst</p>
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-xs text-emerald-500/70 mb-1">Best Trade</p>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs text-white">${stats.maxProfitTrade.pair} ${stats.maxProfitTrade.type}</span>
+                                    <span class="text-xs font-bold text-emerald-400">+$${stats.maxProfitTrade.profit.toFixed(2)}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-xs text-rose-500/70 mb-1">Worst Trade</p>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs text-white">${stats.maxLossTrade.pair} ${stats.maxLossTrade.type}</span>
+                                    <span class="text-xs font-bold text-rose-400">$${stats.maxLossTrade.profit.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="glass-card p-3 rounded-xl">
+                            <p class="text-[10px] text-slate-500 font-bold mb-1">Best Day</p>
+                            <p class="text-sm font-black text-emerald-400">$${stats.bestDay.profit.toFixed(2)}</p>
+                            <p class="text-[10px] text-slate-500">${formatDate(stats.bestDay.date)}</p>
+                        </div>
+                        <div class="glass-card p-3 rounded-xl">
+                            <p class="text-[10px] text-slate-500 font-bold mb-1">Worst Day</p>
+                            <p class="text-sm font-black text-rose-400">$${stats.worstDay.profit.toFixed(2)}</p>
+                            <p class="text-[10px] text-slate-500">${formatDate(stats.worstDay.date)}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('statsModal').classList.remove('hidden');
+        }
+
+        function closeStatsModal() {
+            document.getElementById('statsModal').classList.add('hidden');
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
         }
 
         // --- UTILS ---
@@ -352,8 +673,17 @@
             return days > 0 ? `${days}d ${hours % 24}h` : `${hours}h`;
         }
 
-        function updateBalance(val) { initialBalance = Number(val); saveData(); render(); }
-        function updateLot(val) { lotSize = Number(val); saveData(); render(); }
+        function updateBalance(val) { 
+            initialBalance = Number(val); 
+            saveData(); 
+            render(); 
+        }
+
+        function updateLot(val) { 
+            lotSize = Number(val); 
+            saveData(); 
+            render(); 
+        }
 
         // --- MODAL & FORM ---
         function openModal() {
@@ -361,6 +691,12 @@
             document.getElementById('editId').value = '';
             document.getElementById('modalTitle').innerText = 'TAMBAH DATA BARU';
             document.getElementById('tradeForm').reset();
+            
+            // Set default dates
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('openDate').value = today;
+            document.getElementById('closeDate').value = today;
+            
             setType('Buy');
             setResult('TP');
         }
@@ -371,14 +707,22 @@
 
         function setType(type) {
             currentType = type;
-            document.getElementById('typeBuy').className = type === 'Buy' ? 'flex-1 py-1.5 rounded-md text-[10px] font-black bg-white text-black' : 'flex-1 py-1.5 rounded-md text-[10px] font-black text-slate-500';
-            document.getElementById('typeSell').className = type === 'Sell' ? 'flex-1 py-1.5 rounded-md text-[10px] font-black bg-white text-black' : 'flex-1 py-1.5 rounded-md text-[10px] font-black text-slate-500';
+            document.getElementById('typeBuy').className = type === 'Buy' ? 
+                'flex-1 py-1.5 rounded-md text-[10px] font-black bg-white text-black transition-all' : 
+                'flex-1 py-1.5 rounded-md text-[10px] font-black text-slate-500 transition-all';
+            document.getElementById('typeSell').className = type === 'Sell' ? 
+                'flex-1 py-1.5 rounded-md text-[10px] font-black bg-white text-black transition-all' : 
+                'flex-1 py-1.5 rounded-md text-[10px] font-black text-slate-500 transition-all';
         }
 
         function setResult(res) {
             currentResult = res;
-            document.getElementById('resultTP').className = res === 'TP' ? 'py-3 rounded-2xl border-2 border-emerald-500 bg-emerald-500/20 text-emerald-400 text-xs font-black' : 'py-3 rounded-2xl border-2 border-transparent bg-white/5 text-slate-500 text-xs font-black';
-            document.getElementById('resultSL').className = res === 'SL' ? 'py-3 rounded-2xl border-2 border-rose-500 bg-rose-500/20 text-rose-400 text-xs font-black' : 'py-3 rounded-2xl border-2 border-transparent bg-white/5 text-slate-500 text-xs font-black';
+            document.getElementById('resultTP').className = res === 'TP' ? 
+                'py-3 rounded-2xl border-2 border-emerald-500 bg-emerald-500/20 text-emerald-400 text-xs font-black' : 
+                'py-3 rounded-2xl border-2 border-transparent bg-white/5 text-slate-500 text-xs font-black';
+            document.getElementById('resultSL').className = res === 'SL' ? 
+                'py-3 rounded-2xl border-2 border-rose-500 bg-rose-500/20 text-rose-400 text-xs font-black' : 
+                'py-3 rounded-2xl border-2 border-transparent bg-white/5 text-slate-500 text-xs font-black';
         }
 
         document.getElementById('tradeForm').addEventListener('submit', function(e) {
@@ -395,6 +739,22 @@
                 sl: document.getElementById('slPrice').value,
                 result: currentResult
             };
+
+            // Validation
+            if (entry.openDate > entry.closeDate) {
+                alert('Tanggal open tidak boleh lebih besar dari tanggal close');
+                return;
+            }
+
+            if (entry.type === 'Buy' && entry.entry >= entry.tp) {
+                alert('Untuk BUY, entry price harus lebih rendah dari TP');
+                return;
+            }
+
+            if (entry.type === 'Sell' && entry.entry <= entry.tp) {
+                alert('Untuk SELL, entry price harus lebih tinggi dari TP');
+                return;
+            }
 
             if (id) {
                 trades = trades.map(t => t.id === Number(id) ? entry : t);
@@ -431,7 +791,9 @@
         }
 
         // --- CSV OPERATIONS ---
-        function triggerImport() { document.getElementById('csvFile').click(); }
+        function triggerImport() { 
+            document.getElementById('csvFile').click(); 
+        }
 
         function importCSV(event) {
             const file = event.target.files[0];
@@ -460,6 +822,8 @@
                 saveData();
                 render();
                 event.target.value = '';
+                
+                alert(`Berhasil mengimpor ${newTrades.length} trades`);
             };
             reader.readAsText(file);
         }
@@ -468,7 +832,10 @@
             if (!str) return '';
             const parts = str.split('-');
             if (parts.length === 3) {
-                const monthMap = { 'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12' };
+                const monthMap = { 
+                    'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06',
+                    'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+                };
                 const day = parts[0].padStart(2, '0');
                 const month = monthMap[parts[1]] || '01';
                 const year = parts[2];
@@ -478,7 +845,11 @@
         }
 
         function exportCSV() {
-            if (trades.length === 0) return;
+            if (trades.length === 0) {
+                alert('Tidak ada data untuk diekspor');
+                return;
+            }
+            
             const header = "Pair;Action;Tanggal Entry;Tanggal Exit;Entry;TP;SL;Keterangan\n";
             const content = trades.map(t => {
                 const formatDate = (d) => {
@@ -489,22 +860,69 @@
                 return `${t.pair};${t.type};${formatDate(t.openDate)};${formatDate(t.closeDate)};${t.entry};${t.tp};${t.sl};${t.result}`;
             }).join('\n');
 
-            const blob = new Blob([header + content], { type: 'text/csv' });
+            const blob = new Blob([header + content], { type: 'text/csv;charset=utf-8;' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.setAttribute('hidden', '');
             a.setAttribute('href', url);
-            a.setAttribute('download', 'backtest_export.csv');
+            a.setAttribute('download', `backtest_export_${new Date().toISOString().split('T')[0]}.csv`);
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
         }
 
+        // --- PWA FUNCTIONALITY ---
+        function showInstallPrompt() {
+            const promptDismissed = localStorage.getItem(INSTALL_PROMPT_KEY);
+            if (!promptDismissed && deferredPrompt) {
+                document.getElementById('installPrompt').classList.remove('hidden');
+            }
+        }
+
+        function dismissInstallPrompt() {
+            document.getElementById('installPrompt').classList.add('hidden');
+            localStorage.setItem(INSTALL_PROMPT_KEY, 'true');
+        }
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted PWA installation');
+                        document.getElementById('installPrompt').classList.add('hidden');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+
         // --- STARTUP ---
-        loadData();
-        render();
+        window.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            render();
+            lucide.createIcons();
+            
+            // PWA install prompt
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                setTimeout(showInstallPrompt, 3000);
+            });
+
+            // Save data before page unload
+            window.addEventListener('beforeunload', () => {
+                saveData();
+            });
+
+            // Periodically save data (every 30 seconds)
+            setInterval(saveData, 30000);
+            
+            console.log('Backtest Tools initialized with localStorage support');
+            console.log(`Total trades: ${trades.length}`);
+            console.log(`Storage usage: ${(localStorage.length / 1024).toFixed(2)} KB`);
+        });
 
     </script>
 </body>
 </html>
-

@@ -1,24 +1,108 @@
 {
-  "name": "Backtest",
-  "short_name": "BACKTEST",
-  "description": "Backtest Tools",
-  "start_url": "./index.html",
+  "name": "Backtest Tools",
+  "short_name": "Backtest",
+  "description": "Tools untuk melakukan backtest trading dengan penyimpanan lokal",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#0E0E12",
-  "theme_color": "#6F7CFF",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "background_color": "#0a0a0c",
+  "theme_color": "#0a0a0c",
   "orientation": "portrait",
+  "categories": ["finance", "productivity", "utilities"],
   "icons": [
     {
-      "src": "icon-192x192.png",
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4c8.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4c8.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4c8.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4c8.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4c8.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4c8.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512x512.png",
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4c8.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4c8.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "https://via.placeholder.com/1280x720/0a0a0c/ffffff?text=Backtest+Tools",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Backtest Tools Dashboard"
+    },
+    {
+      "src": "https://via.placeholder.com/750x1334/0a0a0c/ffffff?text=Backtest+Tools",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Backtest Tools Mobile"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add New Trade",
+      "short_name": "New Trade",
+      "description": "Add a new trade record",
+      "url": "/?new=true",
+      "icons": [
+        {
+          "src": "https://cdn.jsdelivr.net/npm/lucide-static@0.263.1/icons/plus-circle.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "View Statistics",
+      "short_name": "Stats",
+      "description": "View detailed statistics",
+      "url": "/?stats=true",
+      "icons": [
+        {
+          "src": "https://cdn.jsdelivr.net/npm/lucide-static@0.263.1/icons/pie-chart.svg",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": []
 }
