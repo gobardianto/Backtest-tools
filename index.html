@@ -80,7 +80,6 @@
 
         <!-- Dynamic Summary Area -->
         <div id="summaryArea">
-            <!-- Akan diisi oleh JavaScript -->
             <div class="h-40 flex flex-col items-center justify-center glass-card rounded-[2rem] text-slate-500">
                 <i data-lucide="file-spreadsheet" class="w-8 h-8 mb-2 opacity-20"></i>
                 <p class="text-xs font-medium tracking-tight">Belum ada data backtest</p>
@@ -96,9 +95,7 @@
         </div>
 
         <!-- History List -->
-        <div id="historyList" class="space-y-2.5">
-            <!-- Akan diisi oleh JavaScript -->
-        </div>
+        <div id="historyList" class="space-y-2.5"></div>
 
     </main>
 
@@ -167,11 +164,43 @@
     </div>
 
     <script>
+        // --- STORAGE KEYS ---
+        const TRADES_KEY = 'bt_trades_data';
+        const CONFIG_KEY = 'bt_config_data';
+
         let trades = [];
         let lotSize = 0.01;
         let initialBalance = 10000;
         let currentType = 'Buy';
         let currentResult = 'TP';
+
+        // --- DATA PERSISTENCE ---
+        function saveData() {
+            localStorage.setItem(TRADES_KEY, JSON.stringify(trades));
+            localStorage.setItem(CONFIG_KEY, JSON.stringify({
+                lotSize,
+                initialBalance
+            }));
+        }
+
+        function loadData() {
+            const savedTrades = localStorage.getItem(TRADES_KEY);
+            const savedConfig = localStorage.getItem(CONFIG_KEY);
+
+            if (savedTrades) {
+                trades = JSON.parse(savedTrades);
+            }
+            
+            if (savedConfig) {
+                const config = JSON.parse(savedConfig);
+                lotSize = config.lotSize || 0.01;
+                initialBalance = config.initialBalance || 10000;
+                
+                // Update UI inputs
+                document.getElementById('balanceInput').value = initialBalance;
+                document.getElementById('lotInput').value = lotSize;
+            }
+        }
 
         // Initialize icons
         lucide.createIcons();
@@ -186,21 +215,18 @@
             let maxCPips = 0, maxCLPips = 0, maxCCount = 0, maxCLCount = 0;
             let curCP = 0, curCL = 0, curCC = 0, curCLC = 0;
             const months = new Set();
-            const years = new Set();
 
             const processed = sorted.map(t => {
                 const entry = parseFloat(t.entry), tp = parseFloat(t.tp), sl = parseFloat(t.sl);
                 const exit = t.result === 'TP' ? tp : sl;
                 const isBuy = t.type === 'Buy';
                 
-                // Pips for XAUUSD (10 pips = 1.0 movement)
                 const pips = isBuy ? (exit - entry) * 10 : (entry - exit) * 10;
                 const profit = pips * (lotSize / 0.01) * 0.10;
                 
                 const risk = isBuy ? (entry - sl) : (sl - entry);
                 const reward = isBuy ? (tp - entry) : (entry - tp);
                 const rr = risk !== 0 ? Math.abs(reward / risk) : 0;
-                
                 const dur = new Date(t.closeDate) - new Date(t.openDate);
 
                 totalProfit += profit;
@@ -210,9 +236,7 @@
                 if (profit > 0) wins++;
 
                 months.add(t.openDate.substring(0, 7));
-                years.add(t.openDate.substring(0, 4));
 
-                // Consecutive Logic
                 if (pips > 0) {
                     curCP += pips; curCC++; curCL = 0; curCLC = 0;
                     if (curCP > maxCPips) maxCPips = curCP;
@@ -254,7 +278,6 @@
                 `;
                 historyList.innerHTML = '';
             } else {
-                // Summary Panel
                 summaryArea.innerHTML = `
                     <div class="space-y-4">
                         <div class="bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-[2.2rem] p-7 shadow-2xl shadow-indigo-500/10">
@@ -291,7 +314,6 @@
                     </div>
                 `;
 
-                // History List
                 historyList.innerHTML = stats.processed.slice().reverse().map(t => `
                     <div class="glass-card p-4 rounded-2xl flex items-center justify-between hover:bg-white/[0.02] transition-colors group">
                         <div class="flex items-center gap-3">
@@ -330,8 +352,8 @@
             return days > 0 ? `${days}d ${hours % 24}h` : `${hours}h`;
         }
 
-        function updateBalance(val) { initialBalance = Number(val); render(); }
-        function updateLot(val) { lotSize = Number(val); render(); }
+        function updateBalance(val) { initialBalance = Number(val); saveData(); render(); }
+        function updateLot(val) { lotSize = Number(val); saveData(); render(); }
 
         // --- MODAL & FORM ---
         function openModal() {
@@ -381,6 +403,7 @@
             }
 
             closeModal();
+            saveData();
             render();
         });
 
@@ -402,6 +425,7 @@
         function deleteTrade(id) {
             if (confirm('Hapus trade ini?')) {
                 trades = trades.filter(t => t.id !== id);
+                saveData();
                 render();
             }
         }
@@ -417,8 +441,6 @@
             reader.onload = function(e) {
                 const text = e.target.result;
                 const rows = text.split(/\r?\n/);
-                const header = rows[0].split(';');
-                
                 const newTrades = rows.slice(1).filter(r => r.trim()).map((row, idx) => {
                     const cols = row.split(';');
                     return {
@@ -435,6 +457,7 @@
                 });
                 
                 trades = [...trades, ...newTrades];
+                saveData();
                 render();
                 event.target.value = '';
             };
@@ -443,7 +466,6 @@
 
         function parseCSVDate(str) {
             if (!str) return '';
-            // Handle DD-MMM-YYYY format (e.g., 14-Jan-2019)
             const parts = str.split('-');
             if (parts.length === 3) {
                 const monthMap = { 'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12' };
@@ -452,7 +474,7 @@
                 const year = parts[2];
                 return `${year}-${month}-${day}`;
             }
-            return str; // Fallback to raw
+            return str;
         }
 
         function exportCSV() {
@@ -472,13 +494,14 @@
             const a = document.createElement('a');
             a.setAttribute('hidden', '');
             a.setAttribute('href', url);
-            a.setAttribute('download', 'backtest_tools_export.csv');
+            a.setAttribute('download', 'backtest_export.csv');
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
         }
 
-        // Initial render
+        // --- STARTUP ---
+        loadData();
         render();
 
     </script>
