@@ -78,17 +78,6 @@
             }
         }
 
-        /* Date picker styling */
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            opacity: 0.5;
-            cursor: pointer;
-        }
-        
-        input[type="date"]::-webkit-calendar-picker-indicator:hover {
-            opacity: 1;
-        }
-
         /* Mobile optimizations */
         @media (max-width: 640px) {
             .glass-card {
@@ -232,46 +221,27 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-1">Open Date</label>
-                        <input type="date" id="openDate" required 
-                               class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500"
-                               onchange="syncCloseDate()">
+                        <input type="date" id="openDate" required class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500">
                     </div>
                     <div>
                         <label class="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-1">Close Date</label>
-                        <input type="date" id="closeDate" required 
-                               class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500">
+                        <input type="date" id="closeDate" required class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500">
                     </div>
-                </div>
-
-                <!-- Quick Date Buttons -->
-                <div class="flex gap-2 justify-center">
-                    <button type="button" onclick="setTodayDates()" class="text-[10px] font-bold text-slate-500 hover:text-white px-3 py-1.5 bg-white/5 rounded-lg transition-colors">
-                        Hari Ini
-                    </button>
-                    <button type="button" onclick="setYesterdayDates()" class="text-[10px] font-bold text-slate-500 hover:text-white px-3 py-1.5 bg-white/5 rounded-lg transition-colors">
-                        Kemarin
-                    </button>
-                    <button type="button" onclick="setSameDates()" class="text-[10px] font-bold text-slate-500 hover:text-white px-3 py-1.5 bg-white/5 rounded-lg transition-colors">
-                        Sama
-                    </button>
                 </div>
 
                 <div>
                     <label class="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-1">Entry Price</label>
-                    <input type="number" id="entryPrice" step="0.01" required 
-                           class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs font-bold text-white outline-none focus:border-indigo-500">
+                    <input type="number" id="entryPrice" step="0.01" required class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs font-bold text-white outline-none">
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="text-[9px] font-bold text-emerald-500 uppercase ml-1 block mb-1">Take Profit</label>
-                        <input type="number" id="tpPrice" step="0.01" required 
-                               class="w-full bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-3 text-xs font-bold text-emerald-400 outline-none focus:border-emerald-500/30">
+                        <input type="number" id="tpPrice" step="0.01" required class="w-full bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-3 text-xs font-bold text-emerald-400 outline-none">
                     </div>
                     <div>
                         <label class="text-[9px] font-bold text-rose-500 uppercase ml-1 block mb-1">Stop Loss</label>
-                        <input type="number" id="slPrice" step="0.01" required 
-                               class="w-full bg-rose-500/5 border border-rose-500/10 rounded-xl p-3 text-xs font-bold text-rose-400 outline-none focus:border-rose-500/30">
+                        <input type="number" id="slPrice" step="0.01" required class="w-full bg-rose-500/5 border border-rose-500/10 rounded-xl p-3 text-xs font-bold text-rose-400 outline-none">
                     </div>
                 </div>
 
@@ -308,8 +278,9 @@
 
     <script>
         // --- STORAGE KEYS ---
-        const TRADES_KEY = 'bt_trades_data_v2';
-        const CONFIG_KEY = 'bt_config_data_v2';
+        const TRADES_KEY = 'bt_trades_data_v4';
+        const CONFIG_KEY = 'bt_config_data_v4';
+        const LAST_DATE_KEY = 'bt_last_date_data';
         const INSTALL_PROMPT_KEY = 'bt_install_prompt';
 
         let trades = [];
@@ -318,7 +289,10 @@
         let currentType = 'Buy';
         let currentResult = 'TP';
         let deferredPrompt = null;
+        
+        // Menyimpan tanggal terakhir untuk form
         let lastOpenDate = null;
+        let lastCloseDate = null;
 
         // --- DATA PERSISTENCE ---
         function saveData() {
@@ -330,13 +304,23 @@
                     lastSaved: new Date().toISOString()
                 }));
                 
+                // Simpan tanggal terakhir jika ada
+                if (trades.length > 0) {
+                    const lastTrade = trades[trades.length - 1];
+                    localStorage.setItem(LAST_DATE_KEY, JSON.stringify({
+                        openDate: lastTrade.openDate,
+                        closeDate: lastTrade.closeDate,
+                        lastUsed: new Date().toISOString()
+                    }));
+                }
+                
                 // Show save confirmation
                 const status = document.getElementById('storageStatus');
                 status.textContent = 'Data Tersimpan';
                 status.className = 'text-[10px] font-bold text-emerald-500';
                 
                 setTimeout(() => {
-                    status.textContent = 'Data Tersimpan';
+                    status.textContent = `Data Tersimpan • ${trades.length} trades`;
                     status.className = 'text-[10px] font-bold text-slate-500';
                 }, 2000);
                 
@@ -351,6 +335,7 @@
             try {
                 const savedTrades = localStorage.getItem(TRADES_KEY);
                 const savedConfig = localStorage.getItem(CONFIG_KEY);
+                const savedLastDate = localStorage.getItem(LAST_DATE_KEY);
 
                 if (savedTrades) {
                     trades = JSON.parse(savedTrades);
@@ -367,6 +352,13 @@
                     document.getElementById('lotInput').value = lotSize;
                 }
                 
+                if (savedLastDate) {
+                    const lastDate = JSON.parse(savedLastDate);
+                    lastOpenDate = lastDate.openDate;
+                    lastCloseDate = lastDate.closeDate;
+                    console.log('Loaded last used dates:', lastOpenDate, lastCloseDate);
+                }
+                
                 updateStorageInfo();
             } catch (e) {
                 console.error('Error loading data:', e);
@@ -374,6 +366,8 @@
                 trades = [];
                 lotSize = 0.01;
                 initialBalance = 10000;
+                lastOpenDate = null;
+                lastCloseDate = null;
             }
         }
 
@@ -393,9 +387,12 @@
                     trades = [];
                     lotSize = 0.01;
                     initialBalance = 10000;
+                    lastOpenDate = null;
+                    lastCloseDate = null;
                     
                     localStorage.removeItem(TRADES_KEY);
                     localStorage.removeItem(CONFIG_KEY);
+                    localStorage.removeItem(LAST_DATE_KEY);
                     
                     document.getElementById('balanceInput').value = initialBalance;
                     document.getElementById('lotInput').value = lotSize;
@@ -411,51 +408,32 @@
         // Initialize icons
         lucide.createIcons();
 
-        // --- DATE SYNC FUNCTIONS ---
-        function syncCloseDate() {
-            const openDate = document.getElementById('openDate').value;
-            const closeDateInput = document.getElementById('closeDate');
+        // --- FUNGSI TANGGAL OTOMATIS ---
+        function getSuggestedDates() {
+            // Format YYYY-MM-DD
+            const formatDate = (date) => date.toISOString().split('T')[0];
             
-            if (!openDate) return;
-            
-            // Store last open date for comparison
-            lastOpenDate = openDate;
-            
-            // Parse dates
-            const open = new Date(openDate);
-            const close = new Date(closeDateInput.value);
-            
-            // If close date is earlier than open date, set it to open date
-            if (closeDateInput.value && close < open) {
-                closeDateInput.value = openDate;
+            // Jika ada data sebelumnya, gunakan tanggal terakhir
+            if (lastOpenDate && lastCloseDate) {
+                return {
+                    openDate: lastOpenDate,
+                    closeDate: lastCloseDate
+                };
             }
             
-            // Set min attribute to prevent selecting earlier dates
-            closeDateInput.min = openDate;
-        }
-
-        function setTodayDates() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('openDate').value = today;
-            document.getElementById('closeDate').value = today;
-            syncCloseDate();
-        }
-
-        function setYesterdayDates() {
+            // Jika tidak ada data, gunakan kemarin (biasanya trading kemarin)
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = yesterday.toISOString().split('T')[0];
-            
-            document.getElementById('openDate').value = yesterdayStr;
-            document.getElementById('closeDate').value = yesterdayStr;
-            syncCloseDate();
+            return {
+                openDate: formatDate(yesterday),
+                closeDate: formatDate(yesterday)
+            };
         }
 
-        function setSameDates() {
-            const openDate = document.getElementById('openDate').value;
-            if (openDate) {
-                document.getElementById('closeDate').value = openDate;
-            }
+        function setSuggestedDates() {
+            const suggested = getSuggestedDates();
+            document.getElementById('openDate').value = suggested.openDate;
+            document.getElementById('closeDate').value = suggested.closeDate;
         }
 
         // --- CORE LOGIC ---
@@ -770,18 +748,21 @@
             document.getElementById('modalTitle').innerText = 'TAMBAH DATA BARU';
             document.getElementById('tradeForm').reset();
             
-            // Set default dates to today
-            setTodayDates();
+            // Set tanggal otomatis berdasarkan data sebelumnya
+            setSuggestedDates();
             
-            // Set minimum close date to open date
-            const openDate = document.getElementById('openDate').value;
-            document.getElementById('closeDate').min = openDate;
+            // Reset harga
+            document.getElementById('entryPrice').value = '';
+            document.getElementById('tpPrice').value = '';
+            document.getElementById('slPrice').value = '';
             
             setType('Buy');
             setResult('TP');
             
-            // Store last open date
-            lastOpenDate = openDate;
+            // Focus ke entry price
+            setTimeout(() => {
+                document.getElementById('entryPrice').focus();
+            }, 100);
         }
 
         function closeModal() {
@@ -811,12 +792,20 @@
         document.getElementById('tradeForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const id = document.getElementById('editId').value;
+            
+            const openDate = document.getElementById('openDate').value;
+            const closeDate = document.getElementById('closeDate').value;
+            
+            // Simpan tanggal yang digunakan untuk data selanjutnya
+            lastOpenDate = openDate;
+            lastCloseDate = closeDate;
+            
             const entry = {
                 id: id ? Number(id) : Date.now(),
                 pair: 'XAUUSD',
                 type: currentType,
-                openDate: document.getElementById('openDate').value,
-                closeDate: document.getElementById('closeDate').value,
+                openDate: openDate,
+                closeDate: closeDate,
                 entry: document.getElementById('entryPrice').value,
                 tp: document.getElementById('tpPrice').value,
                 sl: document.getElementById('slPrice').value,
@@ -861,15 +850,8 @@
             document.getElementById('entryPrice').value = t.entry;
             document.getElementById('tpPrice').value = t.tp;
             document.getElementById('slPrice').value = t.sl;
-            
-            // Set minimum close date
-            document.getElementById('closeDate').min = t.openDate;
-            
             setType(t.type);
             setResult(t.result);
-            
-            // Store last open date
-            lastOpenDate = t.openDate;
         }
 
         function deleteTrade(id) {
@@ -909,6 +891,14 @@
                 });
                 
                 trades = [...trades, ...newTrades];
+                
+                // Update last date dari data yang diimport
+                if (newTrades.length > 0) {
+                    const lastImported = newTrades[newTrades.length - 1];
+                    lastOpenDate = lastImported.openDate;
+                    lastCloseDate = lastImported.closeDate;
+                }
+                
                 saveData();
                 render();
                 event.target.value = '';
@@ -1010,6 +1000,7 @@
             
             console.log('Backtest Tools initialized with localStorage support');
             console.log(`Total trades: ${trades.length}`);
+            console.log(`Last dates: ${lastOpenDate || 'none'}, ${lastCloseDate || 'none'}`);
             console.log(`Storage usage: ${(localStorage.length / 1024).toFixed(2)} KB`);
         });
 
