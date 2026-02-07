@@ -78,6 +78,17 @@
             }
         }
 
+        /* Date picker styling */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            opacity: 0.5;
+            cursor: pointer;
+        }
+        
+        input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
+
         /* Mobile optimizations */
         @media (max-width: 640px) {
             .glass-card {
@@ -221,27 +232,46 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-1">Open Date</label>
-                        <input type="date" id="openDate" required class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500">
+                        <input type="date" id="openDate" required 
+                               class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500"
+                               onchange="syncCloseDate()">
                     </div>
                     <div>
                         <label class="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-1">Close Date</label>
-                        <input type="date" id="closeDate" required class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500">
+                        <input type="date" id="closeDate" required 
+                               class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500">
                     </div>
+                </div>
+
+                <!-- Quick Date Buttons -->
+                <div class="flex gap-2 justify-center">
+                    <button type="button" onclick="setTodayDates()" class="text-[10px] font-bold text-slate-500 hover:text-white px-3 py-1.5 bg-white/5 rounded-lg transition-colors">
+                        Hari Ini
+                    </button>
+                    <button type="button" onclick="setYesterdayDates()" class="text-[10px] font-bold text-slate-500 hover:text-white px-3 py-1.5 bg-white/5 rounded-lg transition-colors">
+                        Kemarin
+                    </button>
+                    <button type="button" onclick="setSameDates()" class="text-[10px] font-bold text-slate-500 hover:text-white px-3 py-1.5 bg-white/5 rounded-lg transition-colors">
+                        Sama
+                    </button>
                 </div>
 
                 <div>
                     <label class="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-1">Entry Price</label>
-                    <input type="number" id="entryPrice" step="0.01" required class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs font-bold text-white outline-none">
+                    <input type="number" id="entryPrice" step="0.01" required 
+                           class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs font-bold text-white outline-none focus:border-indigo-500">
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="text-[9px] font-bold text-emerald-500 uppercase ml-1 block mb-1">Take Profit</label>
-                        <input type="number" id="tpPrice" step="0.01" required class="w-full bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-3 text-xs font-bold text-emerald-400 outline-none">
+                        <input type="number" id="tpPrice" step="0.01" required 
+                               class="w-full bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-3 text-xs font-bold text-emerald-400 outline-none focus:border-emerald-500/30">
                     </div>
                     <div>
                         <label class="text-[9px] font-bold text-rose-500 uppercase ml-1 block mb-1">Stop Loss</label>
-                        <input type="number" id="slPrice" step="0.01" required class="w-full bg-rose-500/5 border border-rose-500/10 rounded-xl p-3 text-xs font-bold text-rose-400 outline-none">
+                        <input type="number" id="slPrice" step="0.01" required 
+                               class="w-full bg-rose-500/5 border border-rose-500/10 rounded-xl p-3 text-xs font-bold text-rose-400 outline-none focus:border-rose-500/30">
                     </div>
                 </div>
 
@@ -288,6 +318,7 @@
         let currentType = 'Buy';
         let currentResult = 'TP';
         let deferredPrompt = null;
+        let lastOpenDate = null;
 
         // --- DATA PERSISTENCE ---
         function saveData() {
@@ -379,6 +410,53 @@
 
         // Initialize icons
         lucide.createIcons();
+
+        // --- DATE SYNC FUNCTIONS ---
+        function syncCloseDate() {
+            const openDate = document.getElementById('openDate').value;
+            const closeDateInput = document.getElementById('closeDate');
+            
+            if (!openDate) return;
+            
+            // Store last open date for comparison
+            lastOpenDate = openDate;
+            
+            // Parse dates
+            const open = new Date(openDate);
+            const close = new Date(closeDateInput.value);
+            
+            // If close date is earlier than open date, set it to open date
+            if (closeDateInput.value && close < open) {
+                closeDateInput.value = openDate;
+            }
+            
+            // Set min attribute to prevent selecting earlier dates
+            closeDateInput.min = openDate;
+        }
+
+        function setTodayDates() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('openDate').value = today;
+            document.getElementById('closeDate').value = today;
+            syncCloseDate();
+        }
+
+        function setYesterdayDates() {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toISOString().split('T')[0];
+            
+            document.getElementById('openDate').value = yesterdayStr;
+            document.getElementById('closeDate').value = yesterdayStr;
+            syncCloseDate();
+        }
+
+        function setSameDates() {
+            const openDate = document.getElementById('openDate').value;
+            if (openDate) {
+                document.getElementById('closeDate').value = openDate;
+            }
+        }
 
         // --- CORE LOGIC ---
         function calculateStats() {
@@ -692,13 +770,18 @@
             document.getElementById('modalTitle').innerText = 'TAMBAH DATA BARU';
             document.getElementById('tradeForm').reset();
             
-            // Set default dates
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('openDate').value = today;
-            document.getElementById('closeDate').value = today;
+            // Set default dates to today
+            setTodayDates();
+            
+            // Set minimum close date to open date
+            const openDate = document.getElementById('openDate').value;
+            document.getElementById('closeDate').min = openDate;
             
             setType('Buy');
             setResult('TP');
+            
+            // Store last open date
+            lastOpenDate = openDate;
         }
 
         function closeModal() {
@@ -778,8 +861,15 @@
             document.getElementById('entryPrice').value = t.entry;
             document.getElementById('tpPrice').value = t.tp;
             document.getElementById('slPrice').value = t.sl;
+            
+            // Set minimum close date
+            document.getElementById('closeDate').min = t.openDate;
+            
             setType(t.type);
             setResult(t.result);
+            
+            // Store last open date
+            lastOpenDate = t.openDate;
         }
 
         function deleteTrade(id) {
