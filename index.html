@@ -1,376 +1,427 @@
 <!DOCTYPE html>
-<html lang="id" class="dark">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bardianto | Multi-User Portfolio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Backtest Tools</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a0c">
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Press+Start+2P&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         
-        :root {
-            --glass: rgba(0, 0, 0, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.12);
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0a0a0c;
+            color: #e2e8f0;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: #050505; 
-            color: #eee; 
-            min-height: 100vh;
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            transition: background 0.5s ease;
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
         }
-
-        .pixel-font { font-family: 'Press Start 2P', cursive; }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
 
         .glass-card {
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
+            background: #141417;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
         }
 
-        .jelly { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .jelly:hover { transform: scale(1.05); }
-
-        .pixel-btn {
-            background: #3b82f6;
-            border: 2px solid #000;
-            box-shadow: 4px 4px 0px #000;
-            color: white;
-            padding: 10px 20px;
-            text-transform: uppercase;
-            font-weight: 800;
-            font-size: 10px;
-            transition: 0.1s;
-            cursor: pointer;
+        .modal-enter { 
+            animation: modalFadeIn 0.3s ease-out; 
         }
-        .pixel-btn:active {
-            box-shadow: 0px 0px 0px #000;
-            transform: translate(2px, 2px);
+        
+        @keyframes modalFadeIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
         }
 
-        .page { display: none; }
-        .page.active { display: block; animation: fadeIn 0.5s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* PWA Installation Prompt */
+        #installPrompt {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { 
+                opacity: 0; 
+                transform: translate(-50%, 100%); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translate(-50%, 0); 
+            }
+        }
 
-        .input-field {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            padding: 14px;
-            border-radius: 12px;
-            width: 100%;
-            font-size: 14px;
-            color: white;
-            outline: none;
+        /* Mobile optimizations */
+        @media (max-width: 640px) {
+            .glass-card {
+                border-radius: 1.5rem !important;
+            }
+            input, button {
+                font-size: 16px !important; /* Prevents iOS zoom */
+            }
         }
     </style>
 </head>
-<body id="main-body">
+<body class="pb-10">
 
-    <nav class="fixed top-0 w-full z-50 p-4 flex justify-center">
-        <div class="glass-card w-full max-w-4xl px-6 py-3 flex items-center justify-between shadow-2xl">
-            <div class="flex items-center gap-3 cursor-pointer jelly" onclick="window.location.href=window.location.origin + window.location.pathname">
-                <img src="icon-1.png" alt="Logo" class="w-8 h-8 object-contain rounded" onerror="this.src='https://ui-avatars.com/api/?name=B&background=3b82f6&color=fff'">
-                <span class="pixel-font text-[9px] tracking-tighter hidden sm:block">SYSTEM.PORTAL</span>
+    <!-- PWA Install Prompt (Hidden by default) -->
+    <div id="installPrompt" class="hidden glass-card p-4 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
+        <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
+                <i data-lucide="bar-chart-3" class="text-white w-6 h-6"></i>
             </div>
-            <div class="flex gap-6 items-center">
-                <button onclick="goTo('home')" class="text-[10px] font-extrabold uppercase tracking-widest hover:text-blue-400 transition">Beranda</button>
-                <div id="nav-auth"></div>
-                <button onclick="shareLink()" class="jelly text-green-500 bg-green-500/10 p-2 rounded-full"><i data-lucide="share-2" class="w-4 h-4"></i></button>
+            <div>
+                <p class="text-sm font-bold text-white">Install Backtest Tools</p>
+                <p class="text-xs text-slate-400">Use offline with full functionality</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="dismissInstallPrompt()" class="flex-1 py-2 text-sm font-bold text-slate-400 hover:text-white transition-colors">
+                Later
+            </button>
+            <button onclick="installPWA()" class="flex-1 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors">
+                Install
+            </button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <nav class="sticky top-0 z-40 bg-[#0a0a0c]/80 backdrop-blur-lg border-b border-white/5 px-5 py-4">
+        <div class="max-w-xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                    <i data-lucide="bar-chart-3" class="text-white w-5 h-5"></i>
+                </div>
+                <h1 class="text-sm font-extrabold tracking-tight text-white uppercase">Backtest Tools</h1>
+            </div>
+            <div class="flex gap-1">
+                <button onclick="exportCSV()" class="p-2.5 hover:bg-white/5 rounded-full transition-colors text-slate-400" title="Unduh CSV">
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                </button>
+                <button onclick="triggerImport()" class="p-2.5 hover:bg-white/5 rounded-full transition-colors text-slate-400" title="Unggah CSV">
+                    <i data-lucide="upload" class="w-5 h-5"></i>
+                </button>
+                <button onclick="clearAllData()" class="p-2.5 hover:bg-white/5 rounded-full transition-colors text-rose-400" title="Hapus Semua Data">
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                </button>
+                <input type="file" id="csvFile" class="hidden" accept=".csv" onchange="importCSV(event)">
             </div>
         </div>
     </nav>
 
-    <main id="home" class="page active pt-32 pb-20 px-6">
-        <div class="max-w-4xl mx-auto space-y-16">
-            <header class="text-center space-y-8">
-                <div class="jelly inline-block relative">
-                    <div class="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full"></div>
-                    <img id="profile-img" src="" class="relative w-28 h-28 md:w-36 md:h-36 rounded-full border-4 border-black object-cover shadow-2xl mx-auto">
-                </div>
-                <div class="space-y-4">
-                    <h1 class="text-5xl md:text-6xl font-extrabold tracking-tighter" id="disp-name">Memuat...</h1>
-                    <div class="glass-card inline-block px-8 py-4 max-w-2xl">
-                        <p class="text-gray-300 text-sm md:text-base leading-relaxed" id="disp-bio">Menghubungkan ke portal...</p>
-                    </div>
-                </div>
-                <div id="home-socials" class="flex justify-center gap-4 flex-wrap"></div>
-            </header>
+    <main class="max-w-xl mx-auto p-5 space-y-6">
+        
+        <!-- Input Settings -->
+        <section class="grid grid-cols-2 gap-3">
+            <div class="glass-card p-3.5 rounded-[1.2rem]">
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Initial Balance</label>
+                <input type="number" id="balanceInput" value="10000" onchange="updateBalance(this.value)" 
+                    class="bg-transparent text-white font-extrabold text-base outline-none w-full">
+            </div>
+            <div class="glass-card p-3.5 rounded-[1.2rem]">
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Lot Size</label>
+                <input type="number" id="lotInput" step="0.01" value="0.01" onchange="updateLot(this.value)"
+                    class="bg-transparent text-white font-extrabold text-base outline-none w-full">
+            </div>
+        </section>
 
-            <section class="space-y-8">
-                <div class="flex items-center gap-4">
-                    <span class="pixel-font text-[8px] text-blue-500">PROYEK_SAYA</span>
-                    <div class="h-[1px] flex-grow bg-white/10"></div>
-                </div>
-                <div id="home-projects" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
-            </section>
+        <!-- Dynamic Summary Area -->
+        <div id="summaryArea">
+            <div class="h-40 flex flex-col items-center justify-center glass-card rounded-[2rem] text-slate-500 border-2 border-dashed border-white/5">
+                <i data-lucide="file-spreadsheet" class="w-8 h-8 mb-2 opacity-20"></i>
+                <p class="text-xs font-medium tracking-tight">Belum ada data backtest</p>
+            </div>
         </div>
+
+        <!-- Trade History Header -->
+        <div class="flex justify-between items-center px-2 pt-2">
+            <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Trade History</h3>
+            <div class="flex items-center gap-2">
+                <button onclick="showStatsModal()" class="p-2 hover:bg-white/5 rounded-full transition-colors text-slate-400" title="Statistik Detail">
+                    <i data-lucide="pie-chart" class="w-4 h-4"></i>
+                </button>
+                <button onclick="openModal()" class="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-full text-[10px] font-bold shadow-lg shadow-indigo-500/20 active:scale-95 transition-all">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> TAMBAH DATA
+                </button>
+            </div>
+        </div>
+
+        <!-- History List -->
+        <div id="historyList" class="space-y-2.5 custom-scrollbar max-h-[400px] overflow-y-auto"></div>
+
+        <!-- Storage Info -->
+        <div class="glass-card p-3 rounded-xl mt-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="database" class="w-4 h-4 text-slate-500"></i>
+                    <span class="text-[10px] font-bold text-slate-500 uppercase">Penyimpanan Lokal</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span id="storageStatus" class="text-[10px] font-bold text-emerald-500">Data Tersimpan</span>
+                </div>
+            </div>
+        </div>
+
     </main>
 
-    <div id="admin" class="page pt-28 px-6 pb-20">
-        <div class="max-w-6xl mx-auto space-y-8">
-            <div class="glass-card p-6 flex flex-wrap gap-4 justify-between items-center">
-                <div>
-                    <h2 class="text-2xl font-black uppercase italic">Dashboard</h2>
-                    <p class="text-[10px] text-blue-400 font-bold" id="user-email-display"></p>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="doLogout()" class="pixel-btn !bg-red-600">Logout</button>
-                </div>
+    <!-- Modal Form Tambah/Edit Trade -->
+    <div id="modal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal()"></div>
+        <div class="relative w-full max-w-md bg-[#141417] rounded-t-[2rem] sm:rounded-[2.5rem] border-t border-white/10 p-7 shadow-2xl modal-enter">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="modalTitle" class="text-sm font-bold text-white uppercase tracking-tighter">Tambah Trade</h3>
+                <button onclick="closeModal()" class="text-slate-500 p-1 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
             </div>
-
-            <div class="grid lg:grid-cols-3 gap-6">
-                <div class="glass-card p-6 space-y-6">
-                    <h3 class="pixel-font text-[8px] text-blue-400">PENGATURAN</h3>
-                    <div class="space-y-4">
-                        <input type="text" id="adm-name" class="input-field text-xs" placeholder="Nama Tampilan">
-                        <textarea id="adm-bio" class="input-field h-24 text-xs" placeholder="Bio Singkat"></textarea>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button onclick="triggerUpload('profile')" class="pixel-btn !bg-blue-600 !p-2 text-[8px]">FOTO</button>
-                            <button onclick="triggerUpload('bg')" class="pixel-btn !bg-purple-600 !p-2 text-[8px]">BACKGROUND</button>
+            <form id="tradeForm" class="space-y-4">
+                <input type="hidden" id="editId">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-white/5 rounded-xl border border-white/5 p-3">
+                        <p class="text-[9px] font-bold text-slate-500 uppercase mb-2">Direction</p>
+                        <div class="flex gap-1.5 p-1 bg-black/20 rounded-lg">
+                            <button type="button" id="typeBuy" onclick="setType('Buy')" class="flex-1 py-1.5 rounded-md text-[10px] font-black bg-white text-black transition-all">BUY</button>
+                            <button type="button" id="typeSell" onclick="setType('Sell')" class="flex-1 py-1.5 rounded-md text-[10px] font-black text-slate-500 transition-all">SELL</button>
                         </div>
-                        <input type="file" id="file-uploader" class="hidden" accept="image/*" onchange="handleUploader(this)">
-                        <button onclick="updateSettings()" class="pixel-btn w-full !bg-green-600">Simpan Profil</button>
+                    </div>
+                    <div class="bg-white/5 rounded-xl border border-white/5 p-3 flex flex-col justify-center">
+                        <p class="text-[9px] font-bold text-slate-500 uppercase mb-1">Instrument</p>
+                        <p class="text-xs font-extrabold text-white">XAUUSD</p>
                     </div>
                 </div>
 
-                <div class="glass-card p-6 space-y-6">
-                    <h3 class="pixel-font text-[8px] text-blue-400">MEDIA SOSIAL</h3>
-                    <form onsubmit="insertData(event, 'social_media')" class="space-y-3">
-                        <input type="text" name="platform" placeholder="Tiktok, WA, Instagram, dll" required class="input-field text-xs">
-                        <input type="url" name="url" placeholder="https://..." required class="input-field text-xs">
-                        <button class="pixel-btn w-full">Tambah Sosial</button>
-                    </form>
-                    <div id="adm-socials" class="space-y-2 max-h-60 overflow-y-auto"></div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-1">Open Date</label>
+                        <input type="date" id="openDate" required class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-1">Close Date</label>
+                        <input type="date" id="closeDate" required class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-indigo-500">
+                    </div>
                 </div>
 
-                <div class="glass-card p-6 space-y-6">
-                    <h3 class="pixel-font text-[8px] text-blue-400">DAFTAR KARYA</h3>
-                    <form onsubmit="insertData(event, 'projects')" class="space-y-3">
-                        <input type="text" name="title" placeholder="Nama Proyek" required class="input-field text-xs">
-                        <input type="url" name="url" placeholder="Link Proyek" required class="input-field text-xs">
-                        <button class="pixel-btn w-full">Tambah Proyek</button>
-                    </form>
-                    <div id="adm-projects" class="space-y-2 max-h-60 overflow-y-auto"></div>
+                <div>
+                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1 block mb-1">Entry Price</label>
+                    <input type="number" id="entryPrice" step="0.01" required class="w-full bg-white/5 border border-white/5 rounded-xl p-3 text-xs font-bold text-white outline-none">
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <div id="login" class="page pt-44 px-6">
-        <div class="max-w-sm mx-auto glass-card p-10 space-y-8">
-            <h2 class="pixel-font text-[10px] text-center">MASUK_SISTEM</h2>
-            <form id="form-login" class="space-y-4">
-                <input type="email" id="email" placeholder="EMAIL" required class="input-field">
-                <input type="password" id="pass" placeholder="PASSWORD" required class="input-field">
-                <button type="submit" id="btn-login" class="pixel-btn w-full">Masuk Sekarang</button>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[9px] font-bold text-emerald-500 uppercase ml-1 block mb-1">Take Profit</label>
+                        <input type="number" id="tpPrice" step="0.01" required class="w-full bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-3 text-xs font-bold text-emerald-400 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[9px] font-bold text-rose-500 uppercase ml-1 block mb-1">Stop Loss</label>
+                        <input type="number" id="slPrice" step="0.01" required class="w-full bg-rose-500/5 border border-rose-500/10 rounded-xl p-3 text-xs font-bold text-rose-400 outline-none">
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <p class="text-[10px] font-bold text-slate-500 uppercase text-center mb-3">Hasil Akhir</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" id="resultTP" onclick="setResult('TP')" class="py-3 rounded-2xl border-2 border-emerald-500 bg-emerald-500/20 text-emerald-400 text-xs font-black">HIT TP</button>
+                        <button type="button" id="resultSL" onclick="setResult('SL')" class="py-3 rounded-2xl border-2 border-transparent bg-white/5 text-slate-500 text-xs font-black">HIT SL</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-2xl font-extrabold text-xs tracking-widest mt-4 shadow-xl shadow-indigo-500/20 transition-all">
+                    CONFIRM TRADE
+                </button>
             </form>
         </div>
     </div>
 
-    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] transform translate-y-20 opacity-0 transition-all duration-300">
-        <div class="bg-white text-black px-8 py-3 rounded-full font-bold text-xs shadow-2xl" id="toast-msg"></div>
+    <!-- Modal Statistik Detail -->
+    <div id="statsModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeStatsModal()"></div>
+        <div class="relative w-full max-w-md bg-[#141417] rounded-[2.5rem] border border-white/10 p-7 shadow-2xl modal-enter">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-sm font-bold text-white uppercase tracking-tighter">Statistik Detail</h3>
+                <button onclick="closeStatsModal()" class="text-slate-500 p-1 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div id="statsContent" class="space-y-4">
+                <!-- Stats will be populated here -->
+            </div>
+        </div>
     </div>
 
     <script>
-        const SB_URL = "https://vikzpwxrzjniandnukxs.supabase.co";
-        const SB_KEY = "sb_publishable_X-Tmbexgd95TpgIgU4UTfQ_Y1uxwSp6";
-        const _sb = supabase.createClient(SB_URL, SB_KEY);
+        // --- STORAGE KEYS ---
+        const TRADES_KEY = 'bt_trades_data_v4';
+        const CONFIG_KEY = 'bt_config_data_v4';
+        const LAST_DATE_KEY = 'bt_last_date_data';
+        const INSTALL_PROMPT_KEY = 'bt_install_prompt';
 
-        let userSession = null;
-        let currentUploadType = 'profile';
+        let trades = [];
+        let lotSize = 0.01;
+        let initialBalance = 10000;
+        let currentType = 'Buy';
+        let currentResult = 'TP';
+        let deferredPrompt = null;
+        
+        // Menyimpan tanggal terakhir untuk form
+        let lastOpenDate = null;
+        let lastCloseDate = null;
 
-        // Custom SVGs for platforms
-        const CUSTOM_ICONS = {
-            tiktok: `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 448 512"><path d="M448,209.91a210.06,210.06,0,0,1-122.77-39.25V349.38A162.55,162.55,0,1,1,185,188.31V278.2a74.62,74.62,0,1,0,52.23,71.18V0l88,0a121.18,121.18,0,0,0,1.86,22.17h0A122.18,122.18,0,0,0,381,102.39a121.43,121.43,0,0,0,67,20.14Z"/></svg>`,
-            whatsapp: `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 448 512"><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-5.5-2.8-23.2-8.5-44.2-27.1-16.4-14.6-27.4-32.7-30.6-38.1-3.2-5.5-.3-8.4 2.4-11.2 2.5-2.5 5.5-6.5 8.3-9.7 2.8-3.3 3.7-5.5 5.5-9.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 13.2 5.8 23.5 9.2 31.5 11.8 13.3 4.2 25.4 3.6 35 2.2 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></svg>`,
-            facebook: `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 512 512"><path d="M504 256C504 119 393 8 256 8S8 119 8 256c0 123.78 90.69 226.38 209.25 245V327.69h-63V256h63v-54.64c0-62.15 37-96.48 93.67-96.48 27.14 0 55.52 4.84 55.52 4.84v61h-31.28c-30.8 0-40.41 19.12-40.41 38.73V256h68.78l-11 71.69h-57.78V501C413.31 482.38 504 379.78 504 256z"/></svg>`
-        };
-
-        window.onload = async () => {
-            const { data: { session } } = await _sb.auth.getSession();
-            userSession = session?.user || null;
-            updateAuthUI();
-            
-            const params = new URLSearchParams(window.location.search);
-            const viewUid = params.get('u');
-
-            if (viewUid) fetchContent(viewUid);
-            else if (userSession) fetchContent(userSession.id);
-        };
-
-        function goTo(id) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            lucide.createIcons();
-        }
-
-        function updateAuthUI() {
-            const nav = document.getElementById('nav-auth');
-            nav.innerHTML = userSession 
-                ? `<button onclick="goTo('admin')" class="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-4 py-2 rounded-full">ADMIN</button>`
-                : `<button onclick="goTo('login')" class="text-[10px] font-bold hover:text-blue-400">LOGIN</button>`;
-        }
-
-        async function fetchContent(uid) {
-            const { data: set } = await _sb.from('settings').select('*').eq('user_id', uid).maybeSingle();
-            if (set) {
-                document.getElementById('disp-name').innerText = set.site_name || 'Bardianto';
-                document.getElementById('disp-bio').innerText = set.bio || '';
-                document.getElementById('profile-img').src = set.profile_image_url || `https://ui-avatars.com/api/?name=${set.site_name}`;
-                if (set.background_url) document.body.style.backgroundImage = `url('${set.background_url}')`;
-
-                if(userSession?.id === uid) {
-                    document.getElementById('adm-name').value = set.site_name || '';
-                    document.getElementById('adm-bio').value = set.bio || '';
-                    document.getElementById('user-email-display').innerText = userSession.email;
+        // --- DATA PERSISTENCE ---
+        function saveData() {
+            try {
+                localStorage.setItem(TRADES_KEY, JSON.stringify(trades));
+                localStorage.setItem(CONFIG_KEY, JSON.stringify({
+                    lotSize,
+                    initialBalance,
+                    lastSaved: new Date().toISOString()
+                }));
+                
+                // Simpan tanggal terakhir jika ada
+                if (trades.length > 0) {
+                    const lastTrade = trades[trades.length - 1];
+                    localStorage.setItem(LAST_DATE_KEY, JSON.stringify({
+                        openDate: lastTrade.openDate,
+                        closeDate: lastTrade.closeDate,
+                        lastUsed: new Date().toISOString()
+                    }));
                 }
-            } else if (userSession?.id === uid) {
-                await _sb.from('settings').insert([{ user_id: uid, site_name: 'User Baru' }]);
-                fetchContent(uid);
+                
+                // Show save confirmation
+                const status = document.getElementById('storageStatus');
+                status.textContent = 'Data Tersimpan';
+                status.className = 'text-[10px] font-bold text-emerald-500';
+                
+                setTimeout(() => {
+                    status.textContent = `Data Tersimpan • ${trades.length} trades`;
+                    status.className = 'text-[10px] font-bold text-slate-500';
+                }, 2000);
+                
+                console.log('Data saved successfully');
+            } catch (e) {
+                console.error('Error saving data:', e);
+                alert('Error saving data. Storage might be full.');
             }
-
-            const { data: soc } = await _sb.from('social_media').select('*').eq('user_id', uid);
-            const { data: proj } = await _sb.from('projects').select('*').eq('user_id', uid);
-
-            renderPublic(soc || [], proj || []);
-            if(userSession?.id === uid) renderAdmin(soc || [], proj || []);
-            lucide.createIcons();
         }
 
-        function renderPublic(soc, proj) {
-            document.getElementById('home-socials').innerHTML = soc.map(s => {
-                const p = s.platform.toLowerCase().replace(/\s+/g, '');
-                let iconHtml = '';
+        function loadData() {
+            try {
+                const savedTrades = localStorage.getItem(TRADES_KEY);
+                const savedConfig = localStorage.getItem(CONFIG_KEY);
+                const savedLastDate = localStorage.getItem(LAST_DATE_KEY);
 
-                if (p.includes('tiktok') || p === 'tt') iconHtml = CUSTOM_ICONS.tiktok;
-                else if (p.includes('whatsapp') || p === 'wa') iconHtml = CUSTOM_ICONS.whatsapp;
-                else if (p.includes('facebook') || p === 'fb') iconHtml = CUSTOM_ICONS.facebook;
-                else iconHtml = `<i data-lucide="${getLucideIcon(p)}" class="w-5 h-5"></i>`;
-
-                return `<a href="${s.url}" target="_blank" class="glass-card p-4 jelly text-gray-300 hover:text-white shadow-lg">${iconHtml}</a>`;
-            }).join('');
-
-            document.getElementById('home-projects').innerHTML = proj.map(p => `
-                <a href="${p.url}" target="_blank" class="glass-card flex flex-col items-center justify-center p-6 jelly aspect-square text-center">
-                    <i data-lucide="layout" class="w-6 h-6 text-blue-500 mb-3"></i>
-                    <h3 class="text-[10px] font-bold uppercase">${p.title}</h3>
-                </a>
-            `).join('');
+                if (savedTrades) {
+                    trades = JSON.parse(savedTrades);
+                    console.log(`Loaded ${trades.length} trades from storage`);
+                }
+                
+                if (savedConfig) {
+                    const config = JSON.parse(savedConfig);
+                    lotSize = config.lotSize || 0.01;
+                    initialBalance = config.initialBalance || 10000;
+                    
+                    // Update UI inputs
+                    document.getElementById('balanceInput').value = initialBalance;
+                    document.getElementById('lotInput').value = lotSize;
+                }
+                
+                if (savedLastDate) {
+                    const lastDate = JSON.parse(savedLastDate);
+                    lastOpenDate = lastDate.openDate;
+                    lastCloseDate = lastDate.closeDate;
+                    console.log('Loaded last used dates:', lastOpenDate, lastCloseDate);
+                }
+                
+                updateStorageInfo();
+            } catch (e) {
+                console.error('Error loading data:', e);
+                // Reset to default if corrupted
+                trades = [];
+                lotSize = 0.01;
+                initialBalance = 10000;
+                lastOpenDate = null;
+                lastCloseDate = null;
+            }
         }
 
-        function renderAdmin(soc, proj) {
-            document.getElementById('adm-socials').innerHTML = soc.map(s => `
-                <div class="flex justify-between p-3 glass-card bg-white/5 text-[10px] mb-2 border-white/5">
-                    <span class="font-bold">${s.platform}</span>
-                    <button onclick="removeData('social_media', ${s.id})" class="text-red-500 hover:underline">Hapus</button>
-                </div>
-            `).join('');
-            document.getElementById('adm-projects').innerHTML = proj.map(p => `
-                <div class="flex justify-between p-3 glass-card bg-white/5 text-[10px] mb-2 border-white/5">
-                    <span class="truncate max-w-[120px] font-bold">${p.title}</span>
-                    <button onclick="removeData('projects', ${p.id})" class="text-red-500 hover:underline">Hapus</button>
-                </div>
-            `).join('');
+        function updateStorageInfo() {
+            const totalTrades = trades.length;
+            const totalKB = (localStorage.length / 1024).toFixed(2);
+            const status = document.getElementById('storageStatus');
+            
+            if (totalTrades > 0) {
+                status.textContent = `${totalTrades} trades • ${totalKB} KB`;
+            }
         }
 
-        function getLucideIcon(p) {
-            if (p.includes('instagram') || p === 'ig') return 'instagram';
-            if (p.includes('github')) return 'github';
-            if (p.includes('youtube') || p === 'yt') return 'youtube';
-            if (p.includes('linkedin')) return 'linkedin';
-            if (p.includes('twitter') || p === 'x') return 'twitter';
-            if (p.includes('mail')) return 'mail';
-            return 'external-link';
+        function clearAllData() {
+            if (confirm('Hapus SEMUA data trade? Tindakan ini tidak dapat dibatalkan.')) {
+                if (confirm('Serius? Semua data akan hilang permanen.')) {
+                    trades = [];
+                    lotSize = 0.01;
+                    initialBalance = 10000;
+                    lastOpenDate = null;
+                    lastCloseDate = null;
+                    
+                    localStorage.removeItem(TRADES_KEY);
+                    localStorage.removeItem(CONFIG_KEY);
+                    localStorage.removeItem(LAST_DATE_KEY);
+                    
+                    document.getElementById('balanceInput').value = initialBalance;
+                    document.getElementById('lotInput').value = lotSize;
+                    
+                    render();
+                    updateStorageInfo();
+                    
+                    alert('Semua data telah dihapus.');
+                }
+            }
         }
 
-        async function triggerUpload(type) {
-            currentUploadType = type;
-            document.getElementById('file-uploader').click();
-        }
+        // Initialize icons
+        lucide.createIcons();
 
-        async function handleUploader(input) {
-            const file = input.files[0];
-            if (!file) return;
-            showToast("⌛ Mengunggah...");
-            const path = `${userSession.id}/${currentUploadType}_${Date.now()}`;
-            const { error } = await _sb.storage.from('uploads').upload(path, file);
-            if (error) return showToast("❌ Gagal Mengunggah");
-
-            const { data: { publicUrl } } = _sb.storage.from('uploads').getPublicUrl(path);
-            const col = currentUploadType === 'profile' ? 'profile_image_url' : 'background_url';
-            await _sb.from('settings').update({ [col]: publicUrl }).eq('user_id', userSession.id);
-            showToast("✅ Berhasil Diperbarui");
-            fetchContent(userSession.id);
-        }
-
-        async function updateSettings() {
-            await _sb.from('settings').update({ 
-                site_name: document.getElementById('adm-name').value,
-                bio: document.getElementById('adm-bio').value
-            }).eq('user_id', userSession.id);
-            showToast("✅ Profil Disimpan");
-            fetchContent(userSession.id);
-        }
-
-        async function insertData(e, table) {
-            e.preventDefault();
-            const data = Object.fromEntries(new FormData(e.target));
-            data.user_id = userSession.id;
-            await _sb.from(table).insert([data]);
-            e.target.reset();
-            fetchContent(userSession.id);
-            showToast("✅ Data Ditambahkan");
-        }
-
-        async function removeData(table, id) {
-            await _sb.from(table).delete().eq('id', id);
-            fetchContent(userSession.id);
-            showToast("🗑️ Berhasil Dihapus");
-        }
-
-        async function shareLink() {
-            const uid = userSession?.id || new URLSearchParams(window.location.search).get('u');
-            if(!uid) return;
-            const url = `${window.location.origin}${window.location.pathname}?u=${uid}`;
-            navigator.clipboard.writeText(url);
-            showToast("📋 Tautan disalin ke papan klip!");
-        }
-
-        document.getElementById('form-login').onsubmit = async (e) => {
-            e.preventDefault();
-            const { data, error } = await _sb.auth.signInWithPassword({
-                email: document.getElementById('email').value,
-                password: document.getElementById('pass').value
-            });
-            if(!error) { 
-                userSession = data.user; 
-                updateAuthUI(); 
-                goTo('admin'); 
-                fetchContent(userSession.id); 
-                showToast("🚀 Berhasil Masuk");
-            } else showToast("❌ Login Gagal");
-        };
-
-        async function doLogout() {
-            await _sb.auth.signOut();
-            window.location.reload();
-        }
-
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            document.getElementById('toast-msg').innerText = msg;
-            t.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
-        }
-    </script>
-</body>
-</html>
-
+        // --- FUNGSI TANGGAL OTOMATIS ---
+        function getSuggestedDates() {
+            // Format YYYY-MM-DD
+            const formatDate = (date) => date.toISOString().split('T')[0];
+            
+            // Jika ada data sebelumnya, gunakan tanggal terakhir
+            if (lastOpenDate && lastCloseDate) {
+                return {
+                    openDate: lastOpenDate,
+                    closeDate: lastCloseDate
+                };
+            }
+            
+            // Jika tidak ada data, gunakan kemarin (biasanya trading kemarin)
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+           
